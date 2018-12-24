@@ -1,22 +1,22 @@
 package datachannel
 
-// ChannelAck is used to ACK a DataChannel open
-type ChannelAck struct{}
+// channelAck is used to ACK a DataChannel open
+type channelAck struct{}
 
 const (
 	channelOpenAckLength = 4
 )
 
 // Marshal returns raw bytes for the given message
-func (c *ChannelAck) Marshal() ([]byte, error) {
+func (c *channelAck) Marshal() ([]byte, error) {
 	raw := make([]byte, channelOpenAckLength)
-	raw[0] = uint8(DataChannelAck)
+	raw[0] = uint8(dataChannelAck)
 
 	return raw, nil
 }
 
 // Unmarshal populates the struct with the given raw data
-func (c *ChannelAck) Unmarshal(raw []byte) error {
+func (c *channelAck) Unmarshal(raw []byte) error {
 	// Message type already checked in Parse and there is no further data
 	return nil
 }

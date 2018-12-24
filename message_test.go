@@ -7,7 +7,7 @@ import (
 )
 
 func TestChannelOpenMarshal(t *testing.T) {
-	msg := ChannelOpen{
+	msg := channelOpen{
 		ChannelType:          ChannelTypeReliable,
 		Priority:             0,
 		ReliabilityParameter: 0,
@@ -38,7 +38,7 @@ func TestChannelOpenMarshal(t *testing.T) {
 }
 
 func TestChannelAckMarshal(t *testing.T) {
-	msg := ChannelAck{}
+	msg := channelAck{}
 	rawMsg, err := msg.Marshal()
 	if err != nil {
 		t.Errorf("Failed to marshal: %v", err)
@@ -61,9 +61,9 @@ func TestChannelAckMarshal(t *testing.T) {
 
 func TestChannelOpenUnmarshal(t *testing.T) {
 	rawMsg := []byte{0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x03, 0x66, 0x6f, 0x6f, 0x62, 0x61, 0x72}
-	msgUncast, err := Parse(rawMsg)
+	msgUncast, err := parse(rawMsg)
 
-	msg, ok := msgUncast.(*ChannelOpen)
+	msg, ok := msgUncast.(*channelOpen)
 	if !ok {
 		t.Error(errors.Errorf("Failed to cast to ChannelOpen"))
 	}
@@ -85,13 +85,13 @@ func TestChannelOpenUnmarshal(t *testing.T) {
 
 func TestChannelAckUnmarshal(t *testing.T) {
 	rawMsg := []byte{0x02}
-	msgUncast, err := Parse(rawMsg)
+	msgUncast, err := parse(rawMsg)
 	if err != nil {
 		t.Errorf("Failed to parse: %v", err)
 		return
 	}
 
-	_, ok := msgUncast.(*ChannelAck)
+	_, ok := msgUncast.(*channelAck)
 	if !ok {
 		t.Error(errors.Errorf("Failed to cast to ChannelAck"))
 	}

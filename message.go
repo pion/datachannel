@@ -6,46 +6,46 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Message is a parsed DataChannel message
-type Message interface {
+// message is a parsed DataChannel message
+type message interface {
 	Marshal() ([]byte, error)
 	Unmarshal([]byte) error
 }
 
-// MessageType is the first byte in a DataChannel message that specifies type
-type MessageType byte
+// messageType is the first byte in a DataChannel message that specifies type
+type messageType byte
 
 // DataChannel Message Types
 const (
-	DataChannelAck  MessageType = 0x02
-	DataChannelOpen MessageType = 0x03
+	dataChannelAck  messageType = 0x02
+	dataChannelOpen messageType = 0x03
 )
 
-func (t MessageType) String() string {
+func (t messageType) String() string {
 	switch t {
-	case DataChannelAck:
+	case dataChannelAck:
 		return "DataChannelAck"
-	case DataChannelOpen:
+	case dataChannelOpen:
 		return "DataChannelOpen"
 	default:
 		return fmt.Sprintf("Unknown MessageType: %d", t)
 	}
 }
 
-// Parse accepts raw input and returns a DataChannel message
-func Parse(raw []byte) (Message, error) {
+// parse accepts raw input and returns a DataChannel message
+func parse(raw []byte) (message, error) {
 	if len(raw) == 0 {
 		return nil, errors.Errorf("DataChannel message is not long enough to determine type ")
 	}
 
-	var msg Message
-	switch MessageType(raw[0]) {
-	case DataChannelOpen:
-		msg = &ChannelOpen{}
-	case DataChannelAck:
-		msg = &ChannelAck{}
+	var msg message
+	switch messageType(raw[0]) {
+	case dataChannelOpen:
+		msg = &channelOpen{}
+	case dataChannelAck:
+		msg = &channelAck{}
 	default:
-		return nil, errors.Errorf("Unknown MessageType %v", MessageType(raw[0]))
+		return nil, errors.Errorf("Unknown MessageType %v", messageType(raw[0]))
 	}
 
 	if err := msg.Unmarshal(raw); err != nil {
@@ -55,18 +55,18 @@ func Parse(raw []byte) (Message, error) {
 	return msg, nil
 }
 
-// ParseExpectDataChannelOpen parses a DataChannelOpen message
+// parseExpectDataChannelOpen parses a DataChannelOpen message
 // or throws an error
-func ParseExpectDataChannelOpen(raw []byte) (*ChannelOpen, error) {
+func parseExpectDataChannelOpen(raw []byte) (*channelOpen, error) {
 	if len(raw) == 0 {
 		return nil, errors.Errorf("the DataChannel message is not long enough to determine type")
 	}
 
-	if actualTyp := MessageType(raw[0]); actualTyp != DataChannelOpen {
+	if actualTyp := messageType(raw[0]); actualTyp != dataChannelOpen {
 		return nil, errors.Errorf("expected DataChannelOpen but got %s", actualTyp)
 	}
 
-	msg := &ChannelOpen{}
+	msg := &channelOpen{}
 	if err := msg.Unmarshal(raw); err != nil {
 		return nil, err
 	}
@@ -74,18 +74,18 @@ func ParseExpectDataChannelOpen(raw []byte) (*ChannelOpen, error) {
 	return msg, nil
 }
 
-// ParseExpectDataChannelAck parses a DataChannelAck message
+// parseExpectDataChannelAck parses a DataChannelAck message
 // or throws an error
-func ParseExpectDataChannelAck(raw []byte) (*ChannelAck, error) {
+func parseExpectDataChannelAck(raw []byte) (*channelAck, error) {
 	if len(raw) == 0 {
 		return nil, errors.Errorf("the DataChannel message is not long enough to determine type")
 	}
 
-	if actualTyp := MessageType(raw[0]); actualTyp != DataChannelAck {
+	if actualTyp := messageType(raw[0]); actualTyp != dataChannelAck {
 		return nil, errors.Errorf("expected DataChannelAck but got %s", actualTyp)
 	}
 
-	msg := &ChannelAck{}
+	msg := &channelAck{}
 	if err := msg.Unmarshal(raw); err != nil {
 		return nil, err
 	}

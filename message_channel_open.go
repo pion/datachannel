@@ -7,7 +7,7 @@ import (
 )
 
 /*
-ChannelOpen represents a DATA_CHANNEL_OPEN Message
+channelOpen represents a DATA_CHANNEL_OPEN Message
 
  0                   1                   2                   3
  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -27,7 +27,7 @@ ChannelOpen represents a DATA_CHANNEL_OPEN Message
 |                                                               |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 */
-type ChannelOpen struct {
+type channelOpen struct {
 	ChannelType          ChannelType
 	Priority             uint16
 	ReliabilityParameter uint32
@@ -81,14 +81,14 @@ const (
 )
 
 // Marshal returns raw bytes for the given message
-func (c *ChannelOpen) Marshal() ([]byte, error) {
+func (c *channelOpen) Marshal() ([]byte, error) {
 	labelLength := len(c.Label)
 	protocolLength := len(c.Protocol)
 
 	totalLen := channelOpenHeaderLength + labelLength + protocolLength
 	raw := make([]byte, totalLen)
 
-	raw[0] = uint8(DataChannelOpen)
+	raw[0] = uint8(dataChannelOpen)
 	raw[1] = byte(c.ChannelType)
 	binary.BigEndian.PutUint16(raw[2:], c.Priority)
 	binary.BigEndian.PutUint32(raw[4:], c.ReliabilityParameter)
@@ -102,7 +102,7 @@ func (c *ChannelOpen) Marshal() ([]byte, error) {
 }
 
 // Unmarshal populates the struct with the given raw data
-func (c *ChannelOpen) Unmarshal(raw []byte) error {
+func (c *channelOpen) Unmarshal(raw []byte) error {
 	if len(raw) < channelOpenHeaderLength {
 		return errors.Errorf("Length of input is not long enough to satisfy header %d", len(raw))
 	}

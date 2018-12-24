@@ -40,7 +40,7 @@ func Dial(a *sctp.Association, id uint16, config *Config) (*DataChannel, error) 
 
 // Client opens a data channel over an SCTP stream
 func Client(stream *sctp.Stream, config *Config) (*DataChannel, error) {
-	msg := &ChannelOpen{
+	msg := &channelOpen{
 		ChannelType:          config.ChannelType,
 		Priority:             config.Priority,
 		ReliabilityParameter: config.ReliabilityParameter,
@@ -96,7 +96,7 @@ func Server(stream *sctp.Stream) (*DataChannel, error) {
 		return nil, fmt.Errorf("unexpected packet type: %s", ppi)
 	}
 
-	openMsg, err := ParseExpectDataChannelOpen(buffer[:n])
+	openMsg, err := parseExpectDataChannelOpen(buffer[:n])
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to parse DataChannelOpen packet")
 	}
@@ -152,20 +152,20 @@ func (c *DataChannel) StreamIdentifier() uint16 {
 }
 
 func (c *DataChannel) handleDCEP(data []byte) error {
-	msg, err := Parse(data)
+	msg, err := parse(data)
 	if err != nil {
 		return errors.Wrap(err, "Failed to parse DataChannel packet")
 	}
 
 	switch msg := msg.(type) {
-	case *ChannelOpen:
+	case *channelOpen:
 		err = c.writeDataChannelAck()
 		if err != nil {
 			return fmt.Errorf("failed to ACK channel open: %v", err)
 		}
 		// TODO: Should not happen?
 
-	case *ChannelAck:
+	case *channelAck:
 		// TODO: handle ChannelAck (https://tools.ietf.org/html/draft-ietf-rtcweb-data-protocol-09#section-5.2)
 		// TODO: handle?
 
@@ -206,7 +206,7 @@ func (c *DataChannel) WriteDataChannel(p []byte, isString bool) (n int, err erro
 }
 
 func (c *DataChannel) writeDataChannelAck() error {
-	ack := ChannelAck{}
+	ack := channelAck{}
 	ackMsg, err := ack.Marshal()
 	if err != nil {
 		return fmt.Errorf("failed to marshal ChannelOpen ACK: %v", err)
