@@ -2,6 +2,7 @@ package datachannel
 
 import (
 	"fmt"
+	"io"
 
 	"github.com/pions/sctp"
 	"github.com/pkg/errors"
@@ -129,6 +130,14 @@ func (c *DataChannel) Read(p []byte) (int, error) {
 func (c *DataChannel) ReadDataChannel(p []byte) (int, bool, error) {
 	for {
 		n, ppi, err := c.stream.ReadSCTP(p)
+		if err == io.EOF {
+			// When the peer sees that an incoming stream was
+			// reset, it also resets its corresponding outgoing stream.
+			c.stream.Close()
+		}
+		if err != nil {
+			return 0, false, err
+		}
 
 		var isString bool
 		switch ppi {
@@ -222,5 +231,16 @@ func (c *DataChannel) writeDataChannelAck() error {
 
 // Close closes the DataChannel and the underlying SCTP stream.
 func (c *DataChannel) Close() error {
+	// https://tools.ietf.org/html/draft-ietf-rtcweb-data-channel-13#section-6.7
+	// Closing of a data channel MUST be signaled by resetting the
+	// corresponding outgoing streams [RFC6525].  This means that if one
+	// side decides to close the data channel, it resets the corresponding
+	// outgoing stream.  When the peer sees that an incoming stream was
+	// reset, it also resets its corresponding outgoing stream.  Once this
+	// is completed, the data channel is closed.  Resetting a stream sets
+	// the Stream Sequence Numbers (SSNs) of the stream back to 'zero' with
+	// a corresponding notification to the application layer that the reset
+	// has been performed.  Streams are available for reuse after a reset
+	// has been performed.
 	return c.stream.Close()
 }
