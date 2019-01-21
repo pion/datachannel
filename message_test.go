@@ -22,7 +22,10 @@ func TestChannelOpenMarshal(t *testing.T) {
 		return
 	}
 
-	result := []byte{0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x03, 0x66, 0x6f, 0x6f, 0x62, 0x61, 0x72}
+	result := []byte{
+		0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x03, 0x00, 0x03, 0x66, 0x6f, 0x6f, 0x62, 0x61, 0x72,
+	}
 
 	if len(rawMsg) != len(result) {
 		t.Errorf("%q != %q", rawMsg, result)
@@ -60,7 +63,11 @@ func TestChannelAckMarshal(t *testing.T) {
 }
 
 func TestChannelOpenUnmarshal(t *testing.T) {
-	rawMsg := []byte{0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x03, 0x66, 0x6f, 0x6f, 0x62, 0x61, 0x72}
+	rawMsg := []byte{
+		0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x03, 0x00, 0x03, 0x66, 0x6f, 0x6f, 0x62, 0x61, 0x72,
+	}
+
 	msgUncast, err := parse(rawMsg)
 
 	msg, ok := msgUncast.(*channelOpen)
@@ -69,17 +76,22 @@ func TestChannelOpenUnmarshal(t *testing.T) {
 	}
 
 	if err != nil {
-		t.Error(errors.Wrap(err, "Unmarshal failed, ChannelOpen"))
-	} else if msg.ChannelType != ChannelTypeReliable {
-		t.Error(errors.Errorf("ChannelType should be 0"))
-	} else if msg.Priority != 0 {
-		t.Error(errors.Errorf("Priority should be 0"))
-	} else if msg.ReliabilityParameter != 0 {
-		t.Error(errors.Errorf("ReliabilityParameter should be 0"))
-	} else if string(msg.Label) != "foo" {
-		t.Error(errors.Errorf("msg Label should be 'foo'"))
-	} else if string(msg.Protocol) != "bar" {
-		t.Error(errors.Errorf("msg protocol should be 'bar'"))
+		t.Fatal(errors.Wrap(err, "Unmarshal failed, ChannelOpen"))
+	}
+	if msg.ChannelType != ChannelTypeReliable {
+		t.Fatal(errors.Errorf("ChannelType should be 0"))
+	}
+	if msg.Priority != 0 {
+		t.Fatal(errors.Errorf("Priority should be 0"))
+	}
+	if msg.ReliabilityParameter != 0 {
+		t.Fatal(errors.Errorf("ReliabilityParameter should be 0"))
+	}
+	if string(msg.Label) != "foo" {
+		t.Fatal(errors.Errorf("msg Label should be 'foo'"))
+	}
+	if string(msg.Protocol) != "bar" {
+		t.Fatal(errors.Errorf("msg protocol should be 'bar'"))
 	}
 }
 

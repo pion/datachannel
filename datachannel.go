@@ -133,7 +133,10 @@ func (c *DataChannel) ReadDataChannel(p []byte) (int, bool, error) {
 		if err == io.EOF {
 			// When the peer sees that an incoming stream was
 			// reset, it also resets its corresponding outgoing stream.
-			c.stream.Close()
+			closeErr := c.stream.Close()
+			if closeErr != nil {
+				return 0, false, closeErr
+			}
 		}
 		if err != nil {
 			return 0, false, err
