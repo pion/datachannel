@@ -76,19 +76,19 @@ func parseExpectDataChannelOpen(raw []byte) (*channelOpen, error) {
 
 // parseExpectDataChannelAck parses a DataChannelAck message
 // or throws an error
-func parseExpectDataChannelAck(raw []byte) (*channelAck, error) {
-	if len(raw) == 0 {
-		return nil, errors.Errorf("the DataChannel message is not long enough to determine type")
-	}
-
-	if actualTyp := messageType(raw[0]); actualTyp != dataChannelAck {
-		return nil, errors.Errorf("expected DataChannelAck but got %s", actualTyp)
-	}
-
-	msg := &channelAck{}
-	if err := msg.Unmarshal(raw); err != nil {
-		return nil, err
-	}
-
-	return msg, nil
-}
+// func parseExpectDataChannelAck(raw []byte) (*channelAck, error) {
+// 	if len(raw) == 0 {
+// 		return nil, errors.Errorf("the DataChannel message is not long enough to determine type")
+// 	}
+//
+// 	if actualTyp := messageType(raw[0]); actualTyp != dataChannelAck {
+// 		return nil, errors.Errorf("expected DataChannelAck but got %s", actualTyp)
+// 	}
+//
+// 	msg := &channelAck{}
+// 	if err := msg.Unmarshal(raw); err != nil {
+// 		return nil, err
+// 	}
+//
+// 	return msg, nil
+// }
