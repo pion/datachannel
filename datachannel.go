@@ -24,6 +24,27 @@ type Config struct {
 	Label                string
 }
 
+func newDataChannel(stream *sctp.Stream, config *Config) *DataChannel {
+	switch config.ChannelType {
+	case ChannelTypeReliable:
+		stream.SetReliabilityParams(false, sctp.ReliabilityTypeReliable, config.ReliabilityParameter)
+	case ChannelTypeReliableUnordered:
+		stream.SetReliabilityParams(true, sctp.ReliabilityTypeReliable, config.ReliabilityParameter)
+	case ChannelTypePartialReliableRexmit:
+		stream.SetReliabilityParams(false, sctp.ReliabilityTypeRexmit, config.ReliabilityParameter)
+	case ChannelTypePartialReliableRexmitUnordered:
+		stream.SetReliabilityParams(true, sctp.ReliabilityTypeRexmit, config.ReliabilityParameter)
+	case ChannelTypePartialReliableTimed:
+		stream.SetReliabilityParams(false, sctp.ReliabilityTypeTimed, config.ReliabilityParameter)
+	case ChannelTypePartialReliableTimedUnordered:
+		stream.SetReliabilityParams(true, sctp.ReliabilityTypeTimed, config.ReliabilityParameter)
+	default:
+		stream.SetReliabilityParams(false, sctp.ReliabilityTypeReliable, config.ReliabilityParameter)
+	}
+
+	return &DataChannel{Config: *config, stream: stream}
+}
+
 // Dial opens a data channels over SCTP
 func Dial(a *sctp.Association, id uint16, config *Config) (*DataChannel, error) {
 	stream, err := a.OpenStream(id, sctp.PayloadTypeWebRTCBinary)
@@ -60,10 +81,7 @@ func Client(stream *sctp.Stream, config *Config) (*DataChannel, error) {
 		return nil, fmt.Errorf("failed to send ChannelOpen %v", err)
 	}
 
-	dataChannel := &DataChannel{
-		Config: *config,
-		stream: stream,
-	}
+	dataChannel := newDataChannel(stream, config)
 
 	return dataChannel, nil
 }
@@ -102,15 +120,12 @@ func Server(stream *sctp.Stream) (*DataChannel, error) {
 		return nil, errors.Wrap(err, "failed to parse DataChannelOpen packet")
 	}
 
-	dataChannel := &DataChannel{
-		Config: Config{
-			ChannelType:          openMsg.ChannelType,
-			Priority:             openMsg.Priority,
-			ReliabilityParameter: openMsg.ReliabilityParameter,
-			Label:                string(openMsg.Label),
-		},
-		stream: stream,
-	}
+	dataChannel := newDataChannel(stream, &Config{
+		ChannelType:          openMsg.ChannelType,
+		Priority:             openMsg.Priority,
+		ReliabilityParameter: openMsg.ReliabilityParameter,
+		Label:                string(openMsg.Label),
+	})
 
 	err = dataChannel.writeDataChannelAck()
 	if err != nil {
