@@ -222,10 +222,12 @@ func closeAssociationPair(br *connBridge, a0, a1 *sctp.Association) {
 	close1Ch := make(chan bool)
 
 	go func() {
+		//nolint:errcheck,gosec
 		a0.Close()
 		close0Ch <- true
 	}()
 	go func() {
+		//nolint:errcheck,gosec
 		a1.Close()
 		close1Ch <- true
 	}()
@@ -251,9 +253,134 @@ loop1:
 	}
 }
 
+func prOrderedTest(t *testing.T, channelType ChannelType) {
+	const msg1 = "ABC"
+	const msg2 = "DEF"
+	br := newConnBridge()
+
+	a0, a1, err := createNewAssociationPair(br)
+	if !assert.Nil(t, err, "failed to create associations") {
+		assert.FailNow(t, "failed due to earlier error")
+	}
+
+	cfg := &Config{
+		ChannelType:          channelType,
+		ReliabilityParameter: 0,
+		Label:                "data",
+	}
+
+	dc0, err := Dial(a0, 100, cfg)
+	assert.Nil(t, err, "Dial() should succeed")
+	br.process()
+
+	dc1, err := Accept(a1)
+	assert.Nil(t, err, "Accept() should succeed")
+	br.process()
+
+	assert.True(t, reflect.DeepEqual(dc0.Config, *cfg), "local config should match")
+	assert.True(t, reflect.DeepEqual(dc1.Config, *cfg), "remote config should match")
+
+	var n int
+
+	n, err = dc0.WriteDataChannel([]byte(msg1), true)
+	assert.Nil(t, err, "Read() should succeed")
+	assert.Equal(t, len(msg1), n, "data length should match")
+
+	n, err = dc0.WriteDataChannel([]byte(msg2), true)
+	assert.Nil(t, err, "Read() should succeed")
+	assert.Equal(t, len(msg2), n, "data length should match")
+
+	br.drop(0, 0, 1) // drop the first packet on the wire
+	br.process()
+
+	buf := make([]byte, 16)
+	var isString bool
+
+	n, isString, err = dc1.ReadDataChannel(buf)
+	assert.Nil(t, err, "Read() should succeed")
+	assert.True(t, isString, "should return isString being true")
+	assert.Equal(t, string(buf[:n]), msg2, "data should match")
+
+	//nolint:errcheck,gosec
+	dc0.Close()
+	//nolint:errcheck,gosec
+	dc1.Close()
+	br.process()
+
+	closeAssociationPair(br, a0, a1)
+}
+
+func prUnorderedTest(t *testing.T, channelType ChannelType) {
+	const msg1 = "ABC"
+	const msg2 = "DEF"
+	const msg3 = "GHI"
+	br := newConnBridge()
+
+	a0, a1, err := createNewAssociationPair(br)
+	if !assert.Nil(t, err, "failed to create associations") {
+		assert.FailNow(t, "failed due to earlier error")
+	}
+
+	cfg := &Config{
+		ChannelType:          channelType,
+		ReliabilityParameter: 0,
+		Label:                "data",
+	}
+
+	dc0, err := Dial(a0, 100, cfg)
+	assert.Nil(t, err, "Dial() should succeed")
+	br.process()
+
+	dc1, err := Accept(a1)
+	assert.Nil(t, err, "Accept() should succeed")
+	br.process()
+
+	assert.True(t, reflect.DeepEqual(dc0.Config, *cfg), "local config should match")
+	assert.True(t, reflect.DeepEqual(dc1.Config, *cfg), "remote config should match")
+
+	var n int
+
+	n, err = dc0.WriteDataChannel([]byte(msg1), true)
+	assert.Nil(t, err, "Read() should succeed")
+	assert.Equal(t, len(msg1), n, "data length should match")
+
+	n, err = dc0.WriteDataChannel([]byte(msg2), true)
+	assert.Nil(t, err, "Read() should succeed")
+	assert.Equal(t, len(msg2), n, "data length should match")
+
+	n, err = dc0.WriteDataChannel([]byte(msg3), true)
+	assert.Nil(t, err, "Read() should succeed")
+	assert.Equal(t, len(msg3), n, "data length should match")
+
+	br.drop(0, 0, 1)    // drop the first packet on the wire
+	err = br.reorder(0) // reorder the rest of the packet
+	assert.Nil(t, err, "reorder failed")
+	br.process()
+
+	buf := make([]byte, 16)
+	var isString bool
+
+	n, isString, err = dc1.ReadDataChannel(buf)
+	assert.Nil(t, err, "Read() should succeed")
+	assert.True(t, isString, "should return isString being true")
+	assert.Equal(t, string(buf[:n]), msg3, "data should match")
+
+	n, isString, err = dc1.ReadDataChannel(buf)
+	assert.Nil(t, err, "Read() should succeed")
+	assert.True(t, isString, "should return isString being true")
+	assert.Equal(t, string(buf[:n]), msg2, "data should match")
+
+	//nolint:errcheck,gosec
+	dc0.Close()
+	//nolint:errcheck,gosec
+	dc1.Close()
+	br.process()
+
+	closeAssociationPair(br, a0, a1)
+}
+
 func TestDataChannel(t *testing.T) {
 	t.Run("ChannelTypeReliable", func(t *testing.T) {
-		const si uint16 = 1
 		const msg1 = "ABC"
 		const msg2 = "DEF"
 		br := newConnBridge()
@@ -270,21 +397,31 @@ func TestDataChannel(t *testing.T) {
 		}
 
 		dc0, err := Dial(a0, 100, cfg)
+		assert.Nil(t, err, "Dial() should succeed")
 		br.process()
 
 		dc1, err := Accept(a1)
+		assert.Nil(t, err, "Accept() should succeed")
 		br.process()
 
 		assert.True(t, reflect.DeepEqual(dc0.Config, *cfg), "local config should match")
 		assert.True(t, reflect.DeepEqual(dc1.Config, *cfg), "remote config should match")
 
-		dc0.Write([]byte(msg1))
-		dc0.Write([]byte(msg2))
-		br.reorder(0) // reordering on the wire
+		var n int
+
+		n, err = dc0.Write([]byte(msg1))
+		assert.Nil(t, err, "Write() should succeed")
+		assert.Equal(t, len(msg1), n, "data length should match")
+
+		n, err = dc0.Write([]byte(msg2))
+		assert.Nil(t, err, "Write() should succeed")
+		assert.Equal(t, len(msg2), n, "data length should match")
+
+		err = br.reorder(0) // reordering on the wire
+		assert.Nil(t, err, "reorder failed")
 		br.process()
 
 		buf := make([]byte, 16)
-		var n int
 
 		n, err = dc1.Read(buf)
 		assert.Nil(t, err, "Read() should succeed")
@@ -294,7 +431,9 @@ func TestDataChannel(t *testing.T) {
 		assert.Nil(t, err, "Read() should succeed")
 		assert.Equal(t, string(buf[:n]), msg2, "data should match")
 
+		//nolint:errcheck,gosec
 		dc0.Close()
+		//nolint:errcheck,gosec
 		dc1.Close()
 		br.process()
 
@@ -302,7 +441,6 @@ func TestDataChannel(t *testing.T) {
 	})
 
 	t.Run("ChannelTypeReliableUnordered", func(t *testing.T) {
-		const si uint16 = 1
 		const msg1 = "ABC"
 		const msg2 = "DEF"
 		br := newConnBridge()
@@ -319,21 +457,31 @@ func TestDataChannel(t *testing.T) {
 		}
 
 		dc0, err := Dial(a0, 100, cfg)
+		assert.Nil(t, err, "Dial() should succeed")
 		br.process()
 
 		dc1, err := Accept(a1)
+		assert.Nil(t, err, "Accept() should succeed")
 		br.process()
 
 		assert.True(t, reflect.DeepEqual(dc0.Config, *cfg), "local config should match")
 		assert.True(t, reflect.DeepEqual(dc1.Config, *cfg), "remote config should match")
 
-		dc0.WriteDataChannel([]byte(msg1), true)
-		dc0.WriteDataChannel([]byte(msg2), true)
-		br.reorder(0) // reordering on the wire
+		var n int
+
+		n, err = dc0.WriteDataChannel([]byte(msg1), true)
+		assert.Nil(t, err, "Read() should succeed")
+		assert.Equal(t, len(msg1), n, "data length should match")
+
+		n, err = dc0.WriteDataChannel([]byte(msg2), true)
+		assert.Nil(t, err, "Read() should succeed")
+		assert.Equal(t, len(msg2), n, "data length should match")
+
+		err = br.reorder(0) // reordering on the wire
+		assert.Nil(t, err, "reorder failed")
 		br.process()
 
 		buf := make([]byte, 16)
-		var n int
 		var isString bool
 
 		n, isString, err = dc1.ReadDataChannel(buf)
@@ -346,7 +494,9 @@ func TestDataChannel(t *testing.T) {
 		assert.True(t, isString, "should return isString being true")
 		assert.Equal(t, string(buf[:n]), msg1, "data should match")
 
+		//nolint:errcheck,gosec
 		dc0.Close()
+		//nolint:errcheck,gosec
 		dc1.Close()
 		br.process()
 
@@ -354,207 +504,19 @@ func TestDataChannel(t *testing.T) {
 	})
 
 	t.Run("ChannelTypePartialReliableRexmit", func(t *testing.T) {
-		const si uint16 = 1
-		const msg1 = "ABC"
-		const msg2 = "DEF"
-		br := newConnBridge()
-
-		a0, a1, err := createNewAssociationPair(br)
-		if !assert.Nil(t, err, "failed to create associations") {
-			assert.FailNow(t, "failed due to earlier error")
-		}
-
-		cfg := &Config{
-			ChannelType:          ChannelTypePartialReliableRexmit,
-			ReliabilityParameter: 0,
-			Label:                "data",
-		}
-
-		dc0, err := Dial(a0, 100, cfg)
-		br.process()
-
-		dc1, err := Accept(a1)
-		br.process()
-
-		assert.True(t, reflect.DeepEqual(dc0.Config, *cfg), "local config should match")
-		assert.True(t, reflect.DeepEqual(dc1.Config, *cfg), "remote config should match")
-
-		dc0.WriteDataChannel([]byte(msg1), true)
-		dc0.WriteDataChannel([]byte(msg2), true)
-		br.drop(0, 0, 1) // drop the first packet on the wire
-		br.process()
-
-		buf := make([]byte, 16)
-		var n int
-		var isString bool
-
-		n, isString, err = dc1.ReadDataChannel(buf)
-		assert.Nil(t, err, "Read() should succeed")
-		assert.True(t, isString, "should return isString being true")
-		assert.Equal(t, string(buf[:n]), msg2, "data should match")
-
-		dc0.Close()
-		dc1.Close()
-		br.process()
-
-		closeAssociationPair(br, a0, a1)
+		prOrderedTest(t, ChannelTypePartialReliableRexmit)
 	})
 
 	t.Run("ChannelTypePartialReliableRexmitUnordered", func(t *testing.T) {
-		const si uint16 = 1
-		const msg1 = "ABC"
-		const msg2 = "DEF"
-		const msg3 = "GHI"
-		br := newConnBridge()
-
-		a0, a1, err := createNewAssociationPair(br)
-		if !assert.Nil(t, err, "failed to create associations") {
-			assert.FailNow(t, "failed due to earlier error")
-		}
-
-		cfg := &Config{
-			ChannelType:          ChannelTypePartialReliableRexmitUnordered,
-			ReliabilityParameter: 0,
-			Label:                "data",
-		}
-
-		dc0, err := Dial(a0, 100, cfg)
-		br.process()
-
-		dc1, err := Accept(a1)
-		br.process()
-
-		assert.True(t, reflect.DeepEqual(dc0.Config, *cfg), "local config should match")
-		assert.True(t, reflect.DeepEqual(dc1.Config, *cfg), "remote config should match")
-
-		dc0.WriteDataChannel([]byte(msg1), true)
-		dc0.WriteDataChannel([]byte(msg2), true)
-		dc0.WriteDataChannel([]byte(msg3), true)
-		br.drop(0, 0, 1) // drop the first packet on the wire
-		br.reorder(0)    // reorder the rest of the packet
-		br.process()
-
-		buf := make([]byte, 16)
-		var n int
-		var isString bool
-
-		n, isString, err = dc1.ReadDataChannel(buf)
-		assert.Nil(t, err, "Read() should succeed")
-		assert.True(t, isString, "should return isString being true")
-		assert.Equal(t, string(buf[:n]), msg3, "data should match")
-
-		n, isString, err = dc1.ReadDataChannel(buf)
-		assert.Nil(t, err, "Read() should succeed")
-		assert.True(t, isString, "should return isString being true")
-		assert.Equal(t, string(buf[:n]), msg2, "data should match")
-
-		dc0.Close()
-		dc1.Close()
-		br.process()
-
-		closeAssociationPair(br, a0, a1)
+		prUnorderedTest(t, ChannelTypePartialReliableRexmitUnordered)
 	})
 
 	t.Run("ChannelTypePartialReliableTimed", func(t *testing.T) {
-		const si uint16 = 1
-		const msg1 = "ABC"
-		const msg2 = "DEF"
-		br := newConnBridge()
-
-		a0, a1, err := createNewAssociationPair(br)
-		if !assert.Nil(t, err, "failed to create associations") {
-			assert.FailNow(t, "failed due to earlier error")
-		}
-
-		cfg := &Config{
-			ChannelType:          ChannelTypePartialReliableTimed,
-			ReliabilityParameter: 0,
-			Label:                "data",
-		}
-
-		dc0, err := Dial(a0, 100, cfg)
-		br.process()
-
-		dc1, err := Accept(a1)
-		br.process()
-
-		assert.True(t, reflect.DeepEqual(dc0.Config, *cfg), "local config should match")
-		assert.True(t, reflect.DeepEqual(dc1.Config, *cfg), "remote config should match")
-
-		dc0.WriteDataChannel([]byte(msg1), true)
-		dc0.WriteDataChannel([]byte(msg2), true)
-		br.drop(0, 0, 1) // drop the first packet on the wire
-		br.process()
-
-		buf := make([]byte, 16)
-		var n int
-		var isString bool
-
-		n, isString, err = dc1.ReadDataChannel(buf)
-		assert.Nil(t, err, "Read() should succeed")
-		assert.True(t, isString, "should return isString being true")
-		assert.Equal(t, string(buf[:n]), msg2, "data should match")
-
-		dc0.Close()
-		dc1.Close()
-		br.process()
-
-		closeAssociationPair(br, a0, a1)
+		prOrderedTest(t, ChannelTypePartialReliableTimed)
 	})
 
 	t.Run("ChannelTypePartialReliableTimedUnordered", func(t *testing.T) {
-		const si uint16 = 1
-		const msg1 = "ABC"
-		const msg2 = "DEF"
-		const msg3 = "GHI"
-		br := newConnBridge()
-
-		a0, a1, err := createNewAssociationPair(br)
-		if !assert.Nil(t, err, "failed to create associations") {
-			assert.FailNow(t, "failed due to earlier error")
-		}
-
-		cfg := &Config{
-			ChannelType:          ChannelTypePartialReliableTimedUnordered,
-			ReliabilityParameter: 0,
-			Label:                "data",
-		}
-
-		dc0, err := Dial(a0, 100, cfg)
-		br.process()
-
-		dc1, err := Accept(a1)
-		br.process()
-
-		assert.True(t, reflect.DeepEqual(dc0.Config, *cfg), "local config should match")
-		assert.True(t, reflect.DeepEqual(dc1.Config, *cfg), "remote config should match")
-
-		dc0.WriteDataChannel([]byte(msg1), true)
-		dc0.WriteDataChannel([]byte(msg2), true)
-		dc0.WriteDataChannel([]byte(msg3), true)
-		br.drop(0, 0, 1) // drop the first packet on the wire
-		br.reorder(0)    // reorder the rest of the packet
-		br.process()
-
-		buf := make([]byte, 16)
-		var n int
-		var isString bool
-
-		n, isString, err = dc1.ReadDataChannel(buf)
-		assert.Nil(t, err, "Read() should succeed")
-		assert.True(t, isString, "should return isString being true")
-		assert.Equal(t, string(buf[:n]), msg3, "data should match")
-
-		n, isString, err = dc1.ReadDataChannel(buf)
-		assert.Nil(t, err, "Read() should succeed")
-		assert.True(t, isString, "should return isString being true")
-		assert.Equal(t, string(buf[:n]), msg2, "data should match")
-
-		dc0.Close()
-		dc1.Close()
-		br.process()
-
-		closeAssociationPair(br, a0, a1)
+		prUnorderedTest(t, ChannelTypePartialReliableTimedUnordered)
 	})
 
 }
