@@ -4,8 +4,11 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/pions/sctp v1.3.0 h1:FSoWK1yFhNHj7ZLfGw0+h0/YOXqkMR9C58lz59uiTMY=
 github.com/pions/sctp v1.3.0/go.mod h1:GZTG/xApE7wdUFEQq2Rmzgxl/+YaB/L1k8xUl1D5bmo=
+github.com/pions/sctp v1.3.1-0.20190210022111-5507c9cbd43e/go.mod h1:GZTG/xApE7wdUFEQq2Rmzgxl/+YaB/L1k8xUl1D5bmo=
 github.com/pions/sctp v1.3.1-0.20190210022111-c9af1d25209e h1:Ede+LP+8Gz4pVOWJGG4qXzRGJ906iCv5fLtMPAyICpo=
 github.com/pions/sctp v1.3.1-0.20190210022111-c9af1d25209e/go.mod h1:GZTG/xApE7wdUFEQq2Rmzgxl/+YaB/L1k8xUl1D5bmo=
+github.com/pions/sctp v1.3.2-0.20190211230616-5507c9cbd43e h1:pA7x80ZbqAnIKZzW7RS8lcx3XOQlKyf1HSkLVfC3A4g=
+github.com/pions/sctp v1.3.2-0.20190211230616-5507c9cbd43e/go.mod h1:GZTG/xApE7wdUFEQq2Rmzgxl/+YaB/L1k8xUl1D5bmo=
 github.com/pions/transport v0.0.0-20190110151433-e7cbf7d5f464 h1:/xAqYLQMIU2ci1fhEdgaFq1zc9E2p83+3a02LzUDRvQ=
 github.com/pions/transport v0.0.0-20190110151433-e7cbf7d5f464/go.mod h1:HLhzI7I0k8TyiQ99hfRZNRf84lG76eaFnZHnVy/wFnM=
 github.com/pions/transport v0.1.0/go.mod h1:HLhzI7I0k8TyiQ99hfRZNRf84lG76eaFnZHnVy/wFnM=
