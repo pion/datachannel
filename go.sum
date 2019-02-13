@@ -2,16 +2,10 @@ github.com/davecgh/go-spew v1.1.0 h1:ZDRjVQ15GmhC3fiQ8ni8+OwkZQO4DARzQgrnXU1Liz8
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/pions/sctp v1.3.0 h1:FSoWK1yFhNHj7ZLfGw0+h0/YOXqkMR9C58lz59uiTMY=
-github.com/pions/sctp v1.3.0/go.mod h1:GZTG/xApE7wdUFEQq2Rmzgxl/+YaB/L1k8xUl1D5bmo=
-github.com/pions/sctp v1.3.1-0.20190210022111-5507c9cbd43e/go.mod h1:GZTG/xApE7wdUFEQq2Rmzgxl/+YaB/L1k8xUl1D5bmo=
-github.com/pions/sctp v1.3.1-0.20190210022111-c9af1d25209e h1:Ede+LP+8Gz4pVOWJGG4qXzRGJ906iCv5fLtMPAyICpo=
-github.com/pions/sctp v1.3.1-0.20190210022111-c9af1d25209e/go.mod h1:GZTG/xApE7wdUFEQq2Rmzgxl/+YaB/L1k8xUl1D5bmo=
-github.com/pions/sctp v1.3.2-0.20190211230616-5507c9cbd43e h1:pA7x80ZbqAnIKZzW7RS8lcx3XOQlKyf1HSkLVfC3A4g=
-github.com/pions/sctp v1.3.2-0.20190211230616-5507c9cbd43e/go.mod h1:GZTG/xApE7wdUFEQq2Rmzgxl/+YaB/L1k8xUl1D5bmo=
-github.com/pions/transport v0.0.0-20190110151433-e7cbf7d5f464 h1:/xAqYLQMIU2ci1fhEdgaFq1zc9E2p83+3a02LzUDRvQ=
-github.com/pions/transport v0.0.0-20190110151433-e7cbf7d5f464/go.mod h1:HLhzI7I0k8TyiQ99hfRZNRf84lG76eaFnZHnVy/wFnM=
-github.com/pions/transport v0.1.0/go.mod h1:HLhzI7I0k8TyiQ99hfRZNRf84lG76eaFnZHnVy/wFnM=
+github.com/pions/sctp v1.3.2-0.20190213093554-e928d24e8af7 h1:SNkS2SC6UNpB7u+tNJ8TQ86i/TQvWa1ot8fnj1vvD8I=
+github.com/pions/sctp v1.3.2-0.20190213093554-e928d24e8af7/go.mod h1:ijzi6pbK8+Oknxv5F1ZdN+tSYs5wm1ayaK2wtcYtyY0=
+github.com/pions/transport v0.1.1-0.20190213080349-17f3c4b39c85 h1:15sCQuKIkCabeLAx8jpt361lWikiqNNrAArnMyV5Ofw=
+github.com/pions/transport v0.1.1-0.20190213080349-17f3c4b39c85/go.mod h1:HLhzI7I0k8TyiQ99hfRZNRf84lG76eaFnZHnVy/wFnM=
 github.com/pkg/errors v0.8.0 h1:WdK/asTD0HN+q6hsWO3/vpuAkAr+tw6aNJNDFFf0+qw=
 github.com/pkg/errors v0.8.0/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pkg/errors v0.8.1 h1:iURUrRGxPUNPdy5/HRSm+Yj6okJ6UtLINN0Q9M4+h3I=
@@ -19,6 +13,5 @@ github.com/pkg/errors v0.8.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINE
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
-github.com/stretchr/objx v0.1.1/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/testify v1.3.0 h1:TivCn/peBQ7UY8ooIcPgZFpTNSz0Q2U6UrFlUfqbe0Q=
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
