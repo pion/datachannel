@@ -24,7 +24,7 @@ type Config struct {
 	Label                string
 }
 
-func newDataChannel(stream *sctp.Stream, config *Config) *DataChannel {
+func newDataChannel(stream *sctp.Stream, config *Config) (*DataChannel, error) {
 	switch config.ChannelType {
 	case ChannelTypeReliable:
 		stream.SetReliabilityParams(false, sctp.ReliabilityTypeReliable, config.ReliabilityParameter)
@@ -39,10 +39,10 @@ func newDataChannel(stream *sctp.Stream, config *Config) *DataChannel {
 	case ChannelTypePartialReliableTimedUnordered:
 		stream.SetReliabilityParams(true, sctp.ReliabilityTypeTimed, config.ReliabilityParameter)
 	default:
-		stream.SetReliabilityParams(false, sctp.ReliabilityTypeReliable, config.ReliabilityParameter)
+		return nil, fmt.Errorf("unable to create datachannel, invalid ChannelType: %v ", config.ChannelType)
 	}
 
-	return &DataChannel{Config: *config, stream: stream}
+	return &DataChannel{Config: *config, stream: stream}, nil
 }
 
 // Dial opens a data channels over SCTP
@@ -81,9 +81,7 @@ func Client(stream *sctp.Stream, config *Config) (*DataChannel, error) {
 		return nil, fmt.Errorf("failed to send ChannelOpen %v", err)
 	}
 
-	dataChannel := newDataChannel(stream, config)
-
-	return dataChannel, nil
+	return newDataChannel(stream, config)
 }
 
 // Accept is used to accept incoming data channels over SCTP
@@ -120,12 +118,15 @@ func Server(stream *sctp.Stream) (*DataChannel, error) {
 		return nil, errors.Wrap(err, "failed to parse DataChannelOpen packet")
 	}
 
-	dataChannel := newDataChannel(stream, &Config{
+	dataChannel, err := newDataChannel(stream, &Config{
 		ChannelType:          openMsg.ChannelType,
 		Priority:             openMsg.Priority,
 		ReliabilityParameter: openMsg.ReliabilityParameter,
 		Label:                string(openMsg.Label),
 	})
+	if err != nil {
+		return nil, err
+	}
 
 	err = dataChannel.writeDataChannelAck()
 	if err != nil {
