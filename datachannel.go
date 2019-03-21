@@ -81,6 +81,17 @@ func Client(stream *sctp.Stream, config *Config) (*DataChannel, error) {
 		return nil, fmt.Errorf("failed to send ChannelOpen %v", err)
 	}
 
+	rawReply := make([]byte, receiveMTU) // TODO: Can probably be smaller
+	n, _, err := stream.ReadSCTP(rawReply)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = parseExpectDataChannelAck(rawReply[:n])
+	if err != nil {
+		return nil, err
+	}
+
 	return newDataChannel(stream, config)
 }
 
@@ -185,23 +196,16 @@ func (c *DataChannel) handleDCEP(data []byte) error {
 		return errors.Wrap(err, "Failed to parse DataChannel packet")
 	}
 
+	// We handle all DCEP in the Client and Server methods. Therefore
+	// we don't expect to receive any here.
 	switch msg := msg.(type) {
 	case *channelOpen:
-		err = c.writeDataChannelAck()
-		if err != nil {
-			return fmt.Errorf("failed to ACK channel open: %v", err)
-		}
-		// TODO: Should not happen?
-
+		return fmt.Errorf("unexpected channel open message %v", msg)
 	case *channelAck:
-		// TODO: handle ChannelAck (https://tools.ietf.org/html/draft-ietf-rtcweb-data-protocol-09#section-5.2)
-		// TODO: handle?
-
+		return fmt.Errorf("unexpected channel ack message %v", msg)
 	default:
-		return fmt.Errorf("unhandled DataChannel message %v", msg)
+		return fmt.Errorf("unexpected DCEP message %v", msg)
 	}
-
-	return nil
 }
 
 // Write writes len(p) bytes from p as binary data

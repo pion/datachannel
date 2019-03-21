@@ -108,16 +108,7 @@ func prOrderedTest(t *testing.T, channelType ChannelType) {
 		Label:                "data",
 	}
 
-	dc0, err := Dial(a0, 100, cfg)
-	assert.Nil(t, err, "Dial() should succeed")
-	br.Process()
-
-	dc1, err := Accept(a1)
-	assert.Nil(t, err, "Accept() should succeed")
-	br.Process()
-
-	assert.True(t, reflect.DeepEqual(dc0.Config, *cfg), "local config should match")
-	assert.True(t, reflect.DeepEqual(dc1.Config, *cfg), "remote config should match")
+	dc0, dc1 := createChannels(br, a0, a1, cfg, t)
 
 	var n int
 
@@ -166,16 +157,7 @@ func prUnorderedTest(t *testing.T, channelType ChannelType) {
 		Label:                "data",
 	}
 
-	dc0, err := Dial(a0, 100, cfg)
-	assert.Nil(t, err, "Dial() should succeed")
-	br.Process()
-
-	dc1, err := Accept(a1)
-	assert.Nil(t, err, "Accept() should succeed")
-	br.Process()
-
-	assert.True(t, reflect.DeepEqual(dc0.Config, *cfg), "local config should match")
-	assert.True(t, reflect.DeepEqual(dc1.Config, *cfg), "remote config should match")
+	dc0, dc1 := createChannels(br, a0, a1, cfg, t)
 
 	var n int
 
@@ -235,16 +217,7 @@ func TestDataChannel(t *testing.T) {
 			Label:                "data",
 		}
 
-		dc0, err := Dial(a0, 100, cfg)
-		assert.Nil(t, err, "Dial() should succeed")
-		br.Process()
-
-		dc1, err := Accept(a1)
-		assert.Nil(t, err, "Accept() should succeed")
-		br.Process()
-
-		assert.True(t, reflect.DeepEqual(dc0.Config, *cfg), "local config should match")
-		assert.True(t, reflect.DeepEqual(dc1.Config, *cfg), "remote config should match")
+		dc0, dc1 := createChannels(br, a0, a1, cfg, t)
 
 		var n int
 
@@ -295,16 +268,7 @@ func TestDataChannel(t *testing.T) {
 			Label:                "data",
 		}
 
-		dc0, err := Dial(a0, 100, cfg)
-		assert.Nil(t, err, "Dial() should succeed")
-		br.Process()
-
-		dc1, err := Accept(a1)
-		assert.Nil(t, err, "Accept() should succeed")
-		br.Process()
-
-		assert.True(t, reflect.DeepEqual(dc0.Config, *cfg), "local config should match")
-		assert.True(t, reflect.DeepEqual(dc1.Config, *cfg), "remote config should match")
+		dc0, dc1 := createChannels(br, a0, a1, cfg, t)
 
 		var n int
 
@@ -358,4 +322,54 @@ func TestDataChannel(t *testing.T) {
 		prUnorderedTest(t, ChannelTypePartialReliableTimedUnordered)
 	})
 
+}
+
+func createChannels(br *test.Bridge, a0, a1 *sctp.Association, cfg *Config, t *testing.T) (*DataChannel, *DataChannel) {
+	// Process the bridge in parallel during setup
+	stopGoProcess := GoProcess(br)
+
+	var dc0 *DataChannel
+	acceptErr := make(chan error)
+	go func() {
+		var err error
+		dc0, err = Accept(a0)
+		acceptErr <- err
+	}()
+
+	dc1, err := Dial(a1, 100, cfg)
+	assert.Nil(t, err, "Dial() should succeed")
+
+	stopGoProcess()
+
+	assert.Nil(t, <-acceptErr, "Accept() should succeed")
+
+	assert.True(t, reflect.DeepEqual(dc0.Config, *cfg), "local config should match")
+	assert.True(t, reflect.DeepEqual(dc1.Config, *cfg), "remote config should match")
+
+	return dc0, dc1
+}
+
+func GoProcess(br *test.Bridge) func() {
+	stop := make(chan struct{})
+	done := make(chan struct{})
+	ticker := time.NewTicker(10 * time.Millisecond)
+	go func() {
+		for {
+			select {
+			case <-ticker.C:
+				br.Process()
+			case <-stop:
+				close(done)
+				return
+			}
+		}
+	}()
+
+	return func() {
+		ticker.Stop()
+		close(stop)
+		<-done
+		// Ensure Process is called for predictability
+		br.Process()
+	}
 }
