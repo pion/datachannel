@@ -10,6 +10,28 @@ import (
 
 const receiveMTU = 8192
 
+// Reader is an extended io.Reader
+// that also returns if the message is text.
+type Reader interface {
+	ReadDataChannel([]byte) (int, bool, error)
+}
+
+// Writer is an extended io.Writer
+// that also allows indicating if a message is text.
+type Writer interface {
+	WriteDataChannel([]byte, bool) (int, error)
+}
+
+// ReadWriteCloser is an extended io.ReadWriteCloser
+// that also implements our Reader and Writer.
+type ReadWriteCloser interface {
+	io.Reader
+	io.Writer
+	Reader
+	Writer
+	io.Closer
+}
+
 // DataChannel represents a data channel
 type DataChannel struct {
 	Config

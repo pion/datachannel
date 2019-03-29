@@ -10,6 +10,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// Check we implement our ReadWriteCloser
+var _ ReadWriteCloser = (*DataChannel)(nil)
+
 func createNewAssociationPair(br *test.Bridge) (*sctp.Association, *sctp.Association, error) {
 	var a0, a1 *sctp.Association
 	var err0, err1 error
