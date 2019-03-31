@@ -222,7 +222,7 @@ func prUnorderedTest(t *testing.T, channelType ChannelType) {
 }
 
 func TestDataChannel(t *testing.T) {
-	t.Run("ChannelTypeReliable", func(t *testing.T) {
+	t.Run("ChannelTypeReliableOrdered", func(t *testing.T) {
 		const msg1 = "ABC"
 		const msg2 = "DEF"
 		br := test.NewBridge()
@@ -361,4 +361,69 @@ func TestDataChannel(t *testing.T) {
 		prUnorderedTest(t, ChannelTypePartialReliableTimedUnordered)
 	})
 
+}
+
+func TestDataChannelBufferedAmount(t *testing.T) {
+	var nCbs int
+	sData := make([]byte, 1000)
+	rData := make([]byte, 1000)
+	br := test.NewBridge()
+
+	a0, a1, err := createNewAssociationPair(br)
+	if !assert.Nil(t, err, "failed to create associations") {
+		assert.FailNow(t, "failed due to earlier error")
+	}
+
+	dc0, err := Dial(a0, 100, &Config{Label: "data"})
+	assert.Nil(t, err, "Dial() should succeed")
+	br.Process()
+
+	dc1, err := Accept(a1)
+	assert.Nil(t, err, "Accept() should succeed")
+	br.Process()
+
+	dc0.SetBufferedAmountLowThreshold(1500)
+	assert.Equal(t, uint64(1500), dc0.BufferedAmountLowThreshold(), "incorrect bufferedAmountLowThreshold")
+	dc0.OnBufferedAmountLow(func() {
+		nCbs++
+	})
+
+	// Write 10 1000-byte packets (total 10,000 bytes)
+	for i := 0; i < 10; i++ {
+		var n int
+		n, err = dc0.Write(sData)
+		assert.Nil(t, err, "Write() should succeed")
+		assert.Equal(t, len(sData), n, "data length should match")
+		assert.Equal(t, uint64(len(sData)*(i+1)), dc0.BufferedAmount(), "incorrect bufferedAmount")
+	}
+
+	go func() {
+		for {
+			n, err := dc1.Read(rData)
+			if err != nil {
+				break
+			}
+			assert.Equal(t, n, len(rData), "received length should match")
+		}
+	}()
+
+	since := time.Now()
+	for {
+		br.Tick()
+		time.Sleep(10 * time.Millisecond)
+		if time.Since(since).Seconds() > 0.5 {
+			break
+		}
+	}
+
+	//nolint:errcheck,gosec
+	dc0.Close()
+	//nolint:errcheck,gosec
+	dc1.Close()
+
+	br.Process()
+
+	assert.Equal(t, 2, nCbs, "should make one callback")
+
+	closeAssociationPair(br, a0, a1)
 }
