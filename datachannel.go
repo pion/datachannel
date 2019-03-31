@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/pion/logging"
 	"github.com/pion/sctp"
 	"github.com/pkg/errors"
 )
@@ -36,6 +37,7 @@ type ReadWriteCloser interface {
 type DataChannel struct {
 	Config
 	stream *sctp.Stream
+	log    *logging.LeveledLogger
 }
 
 // Config is used to configure the data channel.
@@ -64,7 +66,11 @@ func newDataChannel(stream *sctp.Stream, config *Config) (*DataChannel, error) {
 		return nil, fmt.Errorf("unable to create datachannel, invalid ChannelType: %v ", config.ChannelType)
 	}
 
-	return &DataChannel{Config: *config, stream: stream}, nil
+	return &DataChannel{
+		Config: *config,
+		stream: stream,
+		log:    logging.NewScopedLogger("datachannel"),
+	}, nil
 }
 
 // Dial opens a data channels over SCTP
@@ -185,7 +191,7 @@ func (c *DataChannel) ReadDataChannel(p []byte) (int, bool, error) {
 		case sctp.PayloadTypeWebRTCDCEP:
 			err = c.handleDCEP(p[:n])
 			if err != nil {
-				fmt.Println("Failed to handle DCEP:", err)
+				c.log.Errorf("Failed to handle DCEP: %s", err.Error())
 				continue
 			}
 			continue
@@ -284,4 +290,28 @@ func (c *DataChannel) Close() error {
 	// has been performed.  Streams are available for reuse after a reset
 	// has been performed.
 	return c.stream.Close()
+}
+
+// BufferedAmount returns the number of bytes of data currently queued to be
+// sent over this stream.
+func (c *DataChannel) BufferedAmount() uint64 {
+	return c.stream.BufferedAmount()
+}
+
+// BufferedAmountLowThreshold returns the number of bytes of buffered outgoing
+// data that is considered "low." Defaults to 0.
+func (c *DataChannel) BufferedAmountLowThreshold() uint64 {
+	return c.stream.BufferedAmountLowThreshold()
+}
+
+// SetBufferedAmountLowThreshold is used to update the threshold.
+// See BufferedAmountLowThreshold().
+func (c *DataChannel) SetBufferedAmountLowThreshold(th uint64) {
+	c.stream.SetBufferedAmountLowThreshold(th)
+}
+
+// OnBufferedAmountLow sets the callback handler which would be called when the
+// number of bytes of outgoing data buffered is lower than the threshold.
+func (c *DataChannel) OnBufferedAmountLow(f func()) {
+	c.stream.OnBufferedAmountLow(f)
 }
