@@ -37,7 +37,7 @@ type ReadWriteCloser interface {
 type DataChannel struct {
 	Config
 	stream *sctp.Stream
-	log    *logging.LeveledLogger
+	log    logging.LeveledLogger
 }
 
 // Config is used to configure the data channel.
@@ -69,7 +69,7 @@ func newDataChannel(stream *sctp.Stream, config *Config) (*DataChannel, error) {
 	return &DataChannel{
 		Config: *config,
 		stream: stream,
-		log:    logging.NewScopedLogger("datachannel"),
+		log:    logging.NewDefaultLoggerFactory().NewLogger("datachannel"),
 	}, nil
 }
 
