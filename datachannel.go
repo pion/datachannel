@@ -46,6 +46,7 @@ type Config struct {
 	Priority             uint16
 	ReliabilityParameter uint32
 	Label                string
+	LoggerFactory        logging.LoggerFactory
 }
 
 func newDataChannel(stream *sctp.Stream, config *Config) (*DataChannel, error) {
@@ -69,7 +70,7 @@ func newDataChannel(stream *sctp.Stream, config *Config) (*DataChannel, error) {
 	return &DataChannel{
 		Config: *config,
 		stream: stream,
-		log:    logging.NewDefaultLoggerFactory().NewLogger("datachannel"),
+		log:    config.LoggerFactory.NewLogger("datachannel"),
 	}, nil
 }
 
@@ -113,7 +114,7 @@ func Client(stream *sctp.Stream, config *Config) (*DataChannel, error) {
 }
 
 // Accept is used to accept incoming data channels over SCTP
-func Accept(a *sctp.Association) (*DataChannel, error) {
+func Accept(a *sctp.Association, config *Config) (*DataChannel, error) {
 	stream, err := a.AcceptStream()
 	if err != nil {
 		return nil, err
@@ -121,7 +122,7 @@ func Accept(a *sctp.Association) (*DataChannel, error) {
 
 	stream.SetDefaultPayloadType(sctp.PayloadTypeWebRTCBinary)
 
-	dc, err := Server(stream)
+	dc, err := Server(stream, config)
 	if err != nil {
 		return nil, err
 	}
@@ -130,7 +131,7 @@ func Accept(a *sctp.Association) (*DataChannel, error) {
 }
 
 // Server accepts a data channel over an SCTP stream
-func Server(stream *sctp.Stream) (*DataChannel, error) {
+func Server(stream *sctp.Stream, config *Config) (*DataChannel, error) {
 	buffer := make([]byte, receiveMTU) // TODO: Can probably be smaller
 	n, ppi, err := stream.ReadSCTP(buffer)
 	if err != nil {
@@ -146,12 +147,12 @@ func Server(stream *sctp.Stream) (*DataChannel, error) {
 		return nil, errors.Wrap(err, "failed to parse DataChannelOpen packet")
 	}
 
-	dataChannel, err := newDataChannel(stream, &Config{
-		ChannelType:          openMsg.ChannelType,
-		Priority:             openMsg.Priority,
-		ReliabilityParameter: openMsg.ReliabilityParameter,
-		Label:                string(openMsg.Label),
-	})
+	config.ChannelType = openMsg.ChannelType
+	config.Priority = openMsg.Priority
+	config.ReliabilityParameter = openMsg.ReliabilityParameter
+	config.Label = string(openMsg.Label)
+
+	dataChannel, err := newDataChannel(stream, config)
 	if err != nil {
 		return nil, err
 	}
