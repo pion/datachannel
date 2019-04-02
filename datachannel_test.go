@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/pion/logging"
 	"github.com/pion/sctp"
 	"github.com/pion/transport/test"
 	"github.com/stretchr/testify/assert"
@@ -16,16 +17,23 @@ var _ ReadWriteCloser = (*DataChannel)(nil)
 func createNewAssociationPair(br *test.Bridge) (*sctp.Association, *sctp.Association, error) {
 	var a0, a1 *sctp.Association
 	var err0, err1 error
+	loggerFactory := logging.NewDefaultLoggerFactory()
 
 	handshake0Ch := make(chan bool)
 	handshake1Ch := make(chan bool)
 
 	go func() {
-		a0, err0 = sctp.Client(br.GetConn0())
+		a0, err0 = sctp.Client(sctp.Config{
+			NetConn:       br.GetConn0(),
+			LoggerFactory: loggerFactory,
+		})
 		handshake0Ch <- true
 	}()
 	go func() {
-		a1, err1 = sctp.Client(br.GetConn1())
+		a1, err1 = sctp.Client(sctp.Config{
+			NetConn:       br.GetConn1(),
+			LoggerFactory: loggerFactory,
+		})
 		handshake1Ch <- true
 	}()
 
@@ -99,6 +107,7 @@ func prOrderedTest(t *testing.T, channelType ChannelType) {
 	const msg1 = "ABC"
 	const msg2 = "DEF"
 	br := test.NewBridge()
+	loggerFactory := logging.NewDefaultLoggerFactory()
 
 	a0, a1, err := createNewAssociationPair(br)
 	if !assert.Nil(t, err, "failed to create associations") {
@@ -109,13 +118,16 @@ func prOrderedTest(t *testing.T, channelType ChannelType) {
 		ChannelType:          channelType,
 		ReliabilityParameter: 0,
 		Label:                "data",
+		LoggerFactory:        loggerFactory,
 	}
 
 	dc0, err := Dial(a0, 100, cfg)
 	assert.Nil(t, err, "Dial() should succeed")
 	br.Process()
 
-	dc1, err := Accept(a1)
+	dc1, err := Accept(a1, &Config{
+		LoggerFactory: loggerFactory,
+	})
 	assert.Nil(t, err, "Accept() should succeed")
 	br.Process()
 
@@ -157,6 +169,7 @@ func prUnorderedTest(t *testing.T, channelType ChannelType) {
 	const msg2 = "DEF"
 	const msg3 = "GHI"
 	br := test.NewBridge()
+	loggerFactory := logging.NewDefaultLoggerFactory()
 
 	a0, a1, err := createNewAssociationPair(br)
 	if !assert.Nil(t, err, "failed to create associations") {
@@ -167,13 +180,16 @@ func prUnorderedTest(t *testing.T, channelType ChannelType) {
 		ChannelType:          channelType,
 		ReliabilityParameter: 0,
 		Label:                "data",
+		LoggerFactory:        loggerFactory,
 	}
 
 	dc0, err := Dial(a0, 100, cfg)
 	assert.Nil(t, err, "Dial() should succeed")
 	br.Process()
 
-	dc1, err := Accept(a1)
+	dc1, err := Accept(a1, &Config{
+		LoggerFactory: loggerFactory,
+	})
 	assert.Nil(t, err, "Accept() should succeed")
 	br.Process()
 
@@ -222,6 +238,8 @@ func prUnorderedTest(t *testing.T, channelType ChannelType) {
 }
 
 func TestDataChannel(t *testing.T) {
+	loggerFactory := logging.NewDefaultLoggerFactory()
+
 	t.Run("ChannelTypeReliableOrdered", func(t *testing.T) {
 		const msg1 = "ABC"
 		const msg2 = "DEF"
@@ -236,13 +254,16 @@ func TestDataChannel(t *testing.T) {
 			ChannelType:          ChannelTypeReliable,
 			ReliabilityParameter: 123,
 			Label:                "data",
+			LoggerFactory:        loggerFactory,
 		}
 
 		dc0, err := Dial(a0, 100, cfg)
 		assert.Nil(t, err, "Dial() should succeed")
 		br.Process()
 
-		dc1, err := Accept(a1)
+		dc1, err := Accept(a1, &Config{
+			LoggerFactory: loggerFactory,
+		})
 		assert.Nil(t, err, "Accept() should succeed")
 		br.Process()
 
@@ -296,13 +317,16 @@ func TestDataChannel(t *testing.T) {
 			ChannelType:          ChannelTypeReliableUnordered,
 			ReliabilityParameter: 123,
 			Label:                "data",
+			LoggerFactory:        loggerFactory,
 		}
 
 		dc0, err := Dial(a0, 100, cfg)
 		assert.Nil(t, err, "Dial() should succeed")
 		br.Process()
 
-		dc1, err := Accept(a1)
+		dc1, err := Accept(a1, &Config{
+			LoggerFactory: loggerFactory,
+		})
 		assert.Nil(t, err, "Accept() should succeed")
 		br.Process()
 
@@ -368,17 +392,23 @@ func TestDataChannelBufferedAmount(t *testing.T) {
 	sData := make([]byte, 1000)
 	rData := make([]byte, 1000)
 	br := test.NewBridge()
+	loggerFactory := logging.NewDefaultLoggerFactory()
 
 	a0, a1, err := createNewAssociationPair(br)
 	if !assert.Nil(t, err, "failed to create associations") {
 		assert.FailNow(t, "failed due to earlier error")
 	}
 
-	dc0, err := Dial(a0, 100, &Config{Label: "data"})
+	dc0, err := Dial(a0, 100, &Config{
+		Label:         "data",
+		LoggerFactory: loggerFactory,
+	})
 	assert.Nil(t, err, "Dial() should succeed")
 	br.Process()
 
-	dc1, err := Accept(a1)
+	dc1, err := Accept(a1, &Config{
+		LoggerFactory: loggerFactory,
+	})
 	assert.Nil(t, err, "Accept() should succeed")
 	br.Process()
 
