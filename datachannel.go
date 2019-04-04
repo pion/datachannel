@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/pions/sctp"
+	"github.com/pion/sctp"
 	"github.com/pkg/errors"
 )
 
