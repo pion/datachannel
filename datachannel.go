@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/pion/logging"
 	"github.com/pion/sctp"
 	"github.com/pkg/errors"
 )
@@ -36,10 +37,12 @@ type ReadWriteCloser interface {
 type DataChannel struct {
 	Config
 	stream *sctp.Stream
+	log    logging.LeveledLogger
 }
 
 // Config is used to configure the data channel.
 type Config struct {
+	LoggerFactory        logging.LoggerFactory
 	ChannelType          ChannelType
 	Priority             uint16
 	ReliabilityParameter uint32
@@ -64,7 +67,12 @@ func newDataChannel(stream *sctp.Stream, config *Config) (*DataChannel, error) {
 		return nil, fmt.Errorf("unable to create datachannel, invalid ChannelType: %v ", config.ChannelType)
 	}
 
-	return &DataChannel{Config: *config, stream: stream}, nil
+	loggerFactory := config.LoggerFactory
+	if loggerFactory == nil {
+		loggerFactory = logging.NewDefaultLoggerFactory()
+	}
+
+	return &DataChannel{Config: *config, stream: stream, log: loggerFactory.NewLogger("dtls")}, nil
 }
 
 // Dial opens a data channels over SCTP
@@ -185,7 +193,7 @@ func (c *DataChannel) ReadDataChannel(p []byte) (int, bool, error) {
 		case sctp.PayloadTypeWebRTCDCEP:
 			err = c.handleDCEP(p[:n])
 			if err != nil {
-				fmt.Println("Failed to handle DCEP:", err)
+				c.log.Errorf("Failed to handle DCEP:", err)
 				continue
 			}
 			continue
