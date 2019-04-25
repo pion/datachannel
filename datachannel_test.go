@@ -1,6 +1,7 @@
 package datachannel
 
 import (
+	"encoding/binary"
 	"reflect"
 	"testing"
 	"time"
@@ -104,8 +105,9 @@ loop1:
 }
 
 func prOrderedTest(t *testing.T, channelType ChannelType) {
-	const msg1 = "ABC"
-	const msg2 = "DEF"
+	sbuf := make([]byte, 1000)
+	rbuf := make([]byte, 2000)
+
 	br := test.NewBridge()
 	loggerFactory := logging.NewDefaultLoggerFactory()
 
@@ -136,24 +138,26 @@ func prOrderedTest(t *testing.T, channelType ChannelType) {
 
 	var n int
 
-	n, err = dc0.WriteDataChannel([]byte(msg1), true)
+	binary.BigEndian.PutUint32(sbuf, 1)
+	n, err = dc0.WriteDataChannel(sbuf, true)
 	assert.Nil(t, err, "Read() should succeed")
-	assert.Equal(t, len(msg1), n, "data length should match")
+	assert.Equal(t, len(sbuf), n, "data length should match")
 
-	n, err = dc0.WriteDataChannel([]byte(msg2), true)
+	binary.BigEndian.PutUint32(sbuf, 2)
+	n, err = dc0.WriteDataChannel(sbuf, true)
 	assert.Nil(t, err, "Read() should succeed")
-	assert.Equal(t, len(msg2), n, "data length should match")
+	assert.Equal(t, len(sbuf), n, "data length should match")
 
+	time.Sleep(100 * time.Millisecond)
 	br.Drop(0, 0, 1) // drop the first packet on the wire
 	br.Process()
 
-	buf := make([]byte, 16)
 	var isString bool
 
-	n, isString, err = dc1.ReadDataChannel(buf)
+	n, isString, err = dc1.ReadDataChannel(rbuf)
 	assert.Nil(t, err, "Read() should succeed")
 	assert.True(t, isString, "should return isString being true")
-	assert.Equal(t, string(buf[:n]), msg2, "data should match")
+	assert.Equal(t, uint32(2), binary.BigEndian.Uint32(rbuf[:n]), "data should match")
 
 	//nolint:errcheck,gosec
 	dc0.Close()
@@ -165,9 +169,9 @@ func prOrderedTest(t *testing.T, channelType ChannelType) {
 }
 
 func prUnorderedTest(t *testing.T, channelType ChannelType) {
-	const msg1 = "ABC"
-	const msg2 = "DEF"
-	const msg3 = "GHI"
+	sbuf := make([]byte, 1000)
+	rbuf := make([]byte, 2000)
+
 	br := test.NewBridge()
 	loggerFactory := logging.NewDefaultLoggerFactory()
 
@@ -198,35 +202,38 @@ func prUnorderedTest(t *testing.T, channelType ChannelType) {
 
 	var n int
 
-	n, err = dc0.WriteDataChannel([]byte(msg1), true)
+	binary.BigEndian.PutUint32(sbuf, 1)
+	n, err = dc0.WriteDataChannel(sbuf, true)
 	assert.Nil(t, err, "Read() should succeed")
-	assert.Equal(t, len(msg1), n, "data length should match")
+	assert.Equal(t, len(sbuf), n, "data length should match")
 
-	n, err = dc0.WriteDataChannel([]byte(msg2), true)
+	binary.BigEndian.PutUint32(sbuf, 2)
+	n, err = dc0.WriteDataChannel(sbuf, true)
 	assert.Nil(t, err, "Read() should succeed")
-	assert.Equal(t, len(msg2), n, "data length should match")
+	assert.Equal(t, len(sbuf), n, "data length should match")
 
-	n, err = dc0.WriteDataChannel([]byte(msg3), true)
+	binary.BigEndian.PutUint32(sbuf, 3)
+	n, err = dc0.WriteDataChannel(sbuf, true)
 	assert.Nil(t, err, "Read() should succeed")
-	assert.Equal(t, len(msg3), n, "data length should match")
+	assert.Equal(t, len(sbuf), n, "data length should match")
 
+	time.Sleep(100 * time.Millisecond)
 	br.Drop(0, 0, 1)    // drop the first packet on the wire
 	err = br.Reorder(0) // reorder the rest of the packet
 	assert.Nil(t, err, "reorder failed")
 	br.Process()
 
-	buf := make([]byte, 16)
 	var isString bool
 
-	n, isString, err = dc1.ReadDataChannel(buf)
+	n, isString, err = dc1.ReadDataChannel(rbuf)
 	assert.Nil(t, err, "Read() should succeed")
 	assert.True(t, isString, "should return isString being true")
-	assert.Equal(t, string(buf[:n]), msg3, "data should match")
+	assert.Equal(t, uint32(3), binary.BigEndian.Uint32(rbuf[:n]), "data should match")
 
-	n, isString, err = dc1.ReadDataChannel(buf)
+	n, isString, err = dc1.ReadDataChannel(rbuf)
 	assert.Nil(t, err, "Read() should succeed")
 	assert.True(t, isString, "should return isString being true")
-	assert.Equal(t, string(buf[:n]), msg2, "data should match")
+	assert.Equal(t, uint32(2), binary.BigEndian.Uint32(rbuf[:n]), "data should match")
 
 	//nolint:errcheck,gosec
 	dc0.Close()
@@ -240,9 +247,10 @@ func prUnorderedTest(t *testing.T, channelType ChannelType) {
 func TestDataChannel(t *testing.T) {
 	loggerFactory := logging.NewDefaultLoggerFactory()
 
+	sbuf := make([]byte, 1000)
+	rbuf := make([]byte, 1500)
+
 	t.Run("ChannelTypeReliableOrdered", func(t *testing.T) {
-		const msg1 = "ABC"
-		const msg2 = "DEF"
 		br := test.NewBridge()
 
 		a0, a1, err := createNewAssociationPair(br)
@@ -270,29 +278,29 @@ func TestDataChannel(t *testing.T) {
 		assert.True(t, reflect.DeepEqual(dc0.Config, *cfg), "local config should match")
 		assert.True(t, reflect.DeepEqual(dc1.Config, *cfg), "remote config should match")
 
+		br.ReorderNextNWrites(0, 2) // reordering on the wire
+
 		var n int
-
-		n, err = dc0.Write([]byte(msg1))
+		binary.BigEndian.PutUint32(sbuf, uint32(1))
+		n, err = dc0.Write(sbuf)
 		assert.Nil(t, err, "Write() should succeed")
-		assert.Equal(t, len(msg1), n, "data length should match")
+		assert.Equal(t, len(sbuf), n, "data length should match")
 
-		n, err = dc0.Write([]byte(msg2))
+		binary.BigEndian.PutUint32(sbuf, uint32(2))
+		n, err = dc0.Write(sbuf)
 		assert.Nil(t, err, "Write() should succeed")
-		assert.Equal(t, len(msg2), n, "data length should match")
+		assert.Equal(t, len(sbuf), n, "data length should match")
 
-		err = br.Reorder(0) // reordering on the wire
 		assert.Nil(t, err, "reorder failed")
 		br.Process()
 
-		buf := make([]byte, 16)
-
-		n, err = dc1.Read(buf)
+		n, err = dc1.Read(rbuf)
 		assert.Nil(t, err, "Read() should succeed")
-		assert.Equal(t, string(buf[:n]), msg1, "data should match")
+		assert.Equal(t, uint32(1), binary.BigEndian.Uint32(rbuf[:n]), "data should match")
 
-		n, err = dc1.Read(buf)
+		n, err = dc1.Read(rbuf)
 		assert.Nil(t, err, "Read() should succeed")
-		assert.Equal(t, string(buf[:n]), msg2, "data should match")
+		assert.Equal(t, uint32(2), binary.BigEndian.Uint32(rbuf[:n]), "data should match")
 
 		//nolint:errcheck,gosec
 		dc0.Close()
@@ -304,8 +312,9 @@ func TestDataChannel(t *testing.T) {
 	})
 
 	t.Run("ChannelTypeReliableUnordered", func(t *testing.T) {
-		const msg1 = "ABC"
-		const msg2 = "DEF"
+		sbuf := make([]byte, 1000)
+		rbuf := make([]byte, 1500)
+
 		br := test.NewBridge()
 
 		a0, a1, err := createNewAssociationPair(br)
@@ -335,30 +344,32 @@ func TestDataChannel(t *testing.T) {
 
 		var n int
 
-		n, err = dc0.WriteDataChannel([]byte(msg1), true)
+		binary.BigEndian.PutUint32(sbuf, 1)
+		n, err = dc0.WriteDataChannel(sbuf, true)
 		assert.Nil(t, err, "Read() should succeed")
-		assert.Equal(t, len(msg1), n, "data length should match")
+		assert.Equal(t, len(sbuf), n, "data length should match")
 
-		n, err = dc0.WriteDataChannel([]byte(msg2), true)
+		binary.BigEndian.PutUint32(sbuf, 2)
+		n, err = dc0.WriteDataChannel(sbuf, true)
 		assert.Nil(t, err, "Read() should succeed")
-		assert.Equal(t, len(msg2), n, "data length should match")
+		assert.Equal(t, len(sbuf), n, "data length should match")
 
+		time.Sleep(100 * time.Millisecond)
 		err = br.Reorder(0) // reordering on the wire
 		assert.Nil(t, err, "reorder failed")
 		br.Process()
 
-		buf := make([]byte, 16)
 		var isString bool
 
-		n, isString, err = dc1.ReadDataChannel(buf)
+		n, isString, err = dc1.ReadDataChannel(rbuf)
 		assert.Nil(t, err, "Read() should succeed")
 		assert.True(t, isString, "should return isString being true")
-		assert.Equal(t, string(buf[:n]), msg2, "data should match")
+		assert.Equal(t, uint32(2), binary.BigEndian.Uint32(rbuf[:n]), "data should match")
 
-		n, isString, err = dc1.ReadDataChannel(buf)
+		n, isString, err = dc1.ReadDataChannel(rbuf)
 		assert.Nil(t, err, "Read() should succeed")
 		assert.True(t, isString, "should return isString being true")
-		assert.Equal(t, string(buf[:n]), msg1, "data should match")
+		assert.Equal(t, uint32(1), binary.BigEndian.Uint32(rbuf[:n]), "data should match")
 
 		//nolint:errcheck,gosec
 		dc0.Close()
@@ -410,7 +421,10 @@ func TestDataChannelBufferedAmount(t *testing.T) {
 		LoggerFactory: loggerFactory,
 	})
 	assert.Nil(t, err, "Accept() should succeed")
-	br.Process()
+
+	for dc0.BufferedAmount() > 0 {
+		br.Process()
+	}
 
 	dc0.SetBufferedAmountLowThreshold(1500)
 	assert.Equal(t, uint64(1500), dc0.BufferedAmountLowThreshold(), "incorrect bufferedAmountLowThreshold")
@@ -453,7 +467,7 @@ func TestDataChannelBufferedAmount(t *testing.T) {
 
 	br.Process()
 
-	assert.Equal(t, 2, nCbs, "should make one callback")
+	assert.True(t, nCbs > 0, "should make at least one callback")
 
 	closeAssociationPair(br, a0, a1)
 }
