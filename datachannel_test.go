@@ -471,3 +471,77 @@ func TestDataChannelBufferedAmount(t *testing.T) {
 
 	closeAssociationPair(br, a0, a1)
 }
+
+func TestStats(t *testing.T) {
+	loggerFactory := logging.NewDefaultLoggerFactory()
+
+	sbuf := make([]byte, 1000)
+	rbuf := make([]byte, 1500)
+
+	br := test.NewBridge()
+
+	a0, a1, err := createNewAssociationPair(br)
+	if !assert.Nil(t, err, "failed to create associations") {
+		assert.FailNow(t, "failed due to earlier error")
+	}
+
+	cfg := &Config{
+		ChannelType:          ChannelTypeReliable,
+		ReliabilityParameter: 123,
+		Label:                "data",
+		LoggerFactory:        loggerFactory,
+	}
+
+	dc0, err := Dial(a0, 100, cfg)
+	assert.NoError(t, err, "Dial() should succeed")
+	br.Process()
+
+	dc1, err := Accept(a1, &Config{
+		LoggerFactory: loggerFactory,
+	})
+	assert.NoError(t, err, "Accept() should succeed")
+	br.Process()
+
+	var bytesSent uint64
+	var n int
+
+	n, err = dc0.Write(sbuf)
+	assert.NoError(t, err, "Write() should succeed")
+	assert.Equal(t, len(sbuf), n, "data length should match")
+	bytesSent += uint64(n)
+
+	assert.Equal(t, dc0.BytesSent(), bytesSent)
+	assert.Equal(t, dc0.MessagesSent(), uint32(1))
+
+	n, err = dc0.Write(sbuf)
+	assert.NoError(t, err, "Write() should succeed")
+	assert.Equal(t, len(sbuf), n, "data length should match")
+	bytesSent += uint64(n)
+
+	assert.Equal(t, dc0.BytesSent(), bytesSent)
+	assert.Equal(t, dc0.MessagesSent(), uint32(2))
+
+	br.Process()
+
+	var bytesRead uint64
+
+	n, err = dc1.Read(rbuf)
+	assert.NoError(t, err, "Read() should succeed")
+	bytesRead += uint64(n)
+
+	assert.Equal(t, dc1.BytesReceived(), bytesRead)
+	assert.Equal(t, dc1.MessagesReceived(), uint32(1))
+
+	n, err = dc1.Read(rbuf)
+	assert.NoError(t, err, "Read() should succeed")
+	bytesRead += uint64(n)
+
+	assert.Equal(t, dc1.BytesReceived(), bytesRead)
+	assert.Equal(t, dc1.MessagesReceived(), uint32(2))
+
+	assert.NoError(t, dc0.Close())
+	assert.NoError(t, dc1.Close())
+	br.Process()
+
+	closeAssociationPair(br, a0, a1)
+}
