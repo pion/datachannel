@@ -37,14 +37,15 @@ type ReadWriteCloser interface {
 // DataChannel represents a data channel
 type DataChannel struct {
 	Config
-	stream *sctp.Stream
-	log    logging.LeveledLogger
 
 	// stats
 	messagesSent     uint32
 	messagesReceived uint32
 	bytesSent        uint64
 	bytesReceived    uint64
+
+	stream *sctp.Stream
+	log    logging.LeveledLogger
 }
 
 // Config is used to configure the data channel.
