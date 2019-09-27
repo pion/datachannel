@@ -54,6 +54,7 @@ type Config struct {
 	Priority             uint16
 	ReliabilityParameter uint32
 	Label                string
+	Protocol             string
 	LoggerFactory        logging.LoggerFactory
 }
 
@@ -105,7 +106,7 @@ func Client(stream *sctp.Stream, config *Config) (*DataChannel, error) {
 		ReliabilityParameter: config.ReliabilityParameter,
 
 		Label:    []byte(config.Label),
-		Protocol: []byte(""),
+		Protocol: []byte(config.Protocol),
 	}
 
 	rawMsg, err := msg.Marshal()
@@ -159,6 +160,7 @@ func Server(stream *sctp.Stream, config *Config) (*DataChannel, error) {
 	config.Priority = openMsg.Priority
 	config.ReliabilityParameter = openMsg.ReliabilityParameter
 	config.Label = string(openMsg.Label)
+	config.Protocol = string(openMsg.Protocol)
 
 	dataChannel, err := newDataChannel(stream, config)
 	if err != nil {

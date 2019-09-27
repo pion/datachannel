@@ -6,13 +6,8 @@ go:
 env:
   - GO111MODULE=on
 
-notifications:
-  email: false
-#  slack:
-#   secure: TODO
-
 before_script:
-  - GO111MODULE=off go get -u github.com/golangci/golangci-lint/cmd/golangci-lint
+  - curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | bash -s -- -b $GOPATH/bin v1.18.0
 
 script:
   - golangci-lint run ./...
