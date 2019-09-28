@@ -51,6 +51,7 @@ type DataChannel struct {
 // Config is used to configure the data channel.
 type Config struct {
 	ChannelType          ChannelType
+	Negotiated           bool
 	Priority             uint16
 	ReliabilityParameter uint32
 	Label                string
@@ -109,16 +110,16 @@ func Client(stream *sctp.Stream, config *Config) (*DataChannel, error) {
 		Protocol: []byte(config.Protocol),
 	}
 
-	rawMsg, err := msg.Marshal()
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal ChannelOpen %v", err)
-	}
+	if !config.Negotiated {
+		rawMsg, err := msg.Marshal()
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal ChannelOpen %v", err)
+		}
 
-	_, err = stream.WriteSCTP(rawMsg, sctp.PayloadTypeWebRTCDCEP)
-	if err != nil {
-		return nil, fmt.Errorf("failed to send ChannelOpen %v", err)
+		if _, err = stream.WriteSCTP(rawMsg, sctp.PayloadTypeWebRTCDCEP); err != nil {
+			return nil, fmt.Errorf("failed to send ChannelOpen %v", err)
+		}
 	}
-
 	return newDataChannel(stream, config)
 }
 
