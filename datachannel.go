@@ -1,3 +1,4 @@
+// Package datachannel implements WebRTC Data Channels
 package datachannel
 
 import (
@@ -173,7 +174,6 @@ func Server(stream *sctp.Stream, config *Config) (*DataChannel, error) {
 		return nil, err
 	}
 	return dataChannel, nil
-
 }
 
 // Read reads a packet of len(p) bytes as binary data
