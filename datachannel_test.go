@@ -395,7 +395,6 @@ func TestDataChannel(t *testing.T) {
 	t.Run("ChannelTypePartialReliableTimedUnordered", func(t *testing.T) {
 		prUnorderedTest(t, ChannelTypePartialReliableTimedUnordered)
 	})
-
 }
 
 func TestDataChannelBufferedAmount(t *testing.T) {
