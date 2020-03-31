@@ -15,6 +15,18 @@ import (
 // Check we implement our ReadWriteCloser
 var _ ReadWriteCloser = (*DataChannel)(nil)
 
+func bridgeProcessAtLeastOne(br *test.Bridge) {
+	nSum := 0
+	for {
+		time.Sleep(10 * time.Millisecond)
+		n := br.Tick()
+		nSum += n
+		if br.Len(0) == 0 && br.Len(1) == 0 && nSum > 0 {
+			break
+		}
+	}
+}
+
 func createNewAssociationPair(br *test.Bridge) (*sctp.Association, *sctp.Association, error) {
 	var a0, a1 *sctp.Association
 	var err0, err1 error
@@ -105,6 +117,10 @@ loop1:
 }
 
 func prOrderedTest(t *testing.T, channelType ChannelType) {
+	// Limit runtime in case of deadlocks
+	lim := test.TimeOut(time.Second * 10)
+	defer lim.Stop()
+
 	sbuf := make([]byte, 1000)
 	rbuf := make([]byte, 2000)
 
@@ -125,13 +141,13 @@ func prOrderedTest(t *testing.T, channelType ChannelType) {
 
 	dc0, err := Dial(a0, 100, cfg)
 	assert.Nil(t, err, "Dial() should succeed")
-	br.Process()
+	bridgeProcessAtLeastOne(br)
 
 	dc1, err := Accept(a1, &Config{
 		LoggerFactory: loggerFactory,
 	})
 	assert.Nil(t, err, "Accept() should succeed")
-	br.Process()
+	bridgeProcessAtLeastOne(br)
 
 	assert.True(t, reflect.DeepEqual(dc0.Config, *cfg), "local config should match")
 	assert.True(t, reflect.DeepEqual(dc1.Config, *cfg), "remote config should match")
@@ -150,7 +166,8 @@ func prOrderedTest(t *testing.T, channelType ChannelType) {
 
 	time.Sleep(100 * time.Millisecond)
 	br.Drop(0, 0, 1) // drop the first packet on the wire
-	br.Process()
+	time.Sleep(100 * time.Millisecond)
+	bridgeProcessAtLeastOne(br)
 
 	var isString bool
 
@@ -163,7 +180,7 @@ func prOrderedTest(t *testing.T, channelType ChannelType) {
 	dc0.Close()
 	//nolint:errcheck,gosec
 	dc1.Close()
-	br.Process()
+	bridgeProcessAtLeastOne(br)
 
 	closeAssociationPair(br, a0, a1)
 }
@@ -189,13 +206,13 @@ func prUnorderedTest(t *testing.T, channelType ChannelType) {
 
 	dc0, err := Dial(a0, 100, cfg)
 	assert.Nil(t, err, "Dial() should succeed")
-	br.Process()
+	bridgeProcessAtLeastOne(br)
 
 	dc1, err := Accept(a1, &Config{
 		LoggerFactory: loggerFactory,
 	})
 	assert.Nil(t, err, "Accept() should succeed")
-	br.Process()
+	bridgeProcessAtLeastOne(br)
 
 	assert.True(t, reflect.DeepEqual(dc0.Config, *cfg), "local config should match")
 	assert.True(t, reflect.DeepEqual(dc1.Config, *cfg), "remote config should match")
@@ -221,7 +238,7 @@ func prUnorderedTest(t *testing.T, channelType ChannelType) {
 	br.Drop(0, 0, 1)    // drop the first packet on the wire
 	err = br.Reorder(0) // reorder the rest of the packet
 	assert.Nil(t, err, "reorder failed")
-	br.Process()
+	bridgeProcessAtLeastOne(br)
 
 	var isString bool
 
@@ -239,7 +256,7 @@ func prUnorderedTest(t *testing.T, channelType ChannelType) {
 	dc0.Close()
 	//nolint:errcheck,gosec
 	dc1.Close()
-	br.Process()
+	bridgeProcessAtLeastOne(br)
 
 	closeAssociationPair(br, a0, a1)
 }
@@ -251,6 +268,10 @@ func TestDataChannel(t *testing.T) {
 	rbuf := make([]byte, 1500)
 
 	t.Run("ChannelTypeReliableOrdered", func(t *testing.T) {
+		// Limit runtime in case of deadlocks
+		lim := test.TimeOut(time.Second * 10)
+		defer lim.Stop()
+
 		br := test.NewBridge()
 
 		a0, a1, err := createNewAssociationPair(br)
@@ -267,13 +288,14 @@ func TestDataChannel(t *testing.T) {
 
 		dc0, err := Dial(a0, 100, cfg)
 		assert.Nil(t, err, "Dial() should succeed")
-		br.Process()
+
+		bridgeProcessAtLeastOne(br)
 
 		dc1, err := Accept(a1, &Config{
 			LoggerFactory: loggerFactory,
 		})
 		assert.Nil(t, err, "Accept() should succeed")
-		br.Process()
+		bridgeProcessAtLeastOne(br)
 
 		assert.True(t, reflect.DeepEqual(dc0.Config, *cfg), "local config should match")
 		assert.True(t, reflect.DeepEqual(dc1.Config, *cfg), "remote config should match")
@@ -292,7 +314,8 @@ func TestDataChannel(t *testing.T) {
 		assert.Equal(t, len(sbuf), n, "data length should match")
 
 		assert.Nil(t, err, "reorder failed")
-		br.Process()
+
+		bridgeProcessAtLeastOne(br)
 
 		n, err = dc1.Read(rbuf)
 		assert.Nil(t, err, "Read() should succeed")
@@ -306,12 +329,16 @@ func TestDataChannel(t *testing.T) {
 		dc0.Close()
 		//nolint:errcheck,gosec
 		dc1.Close()
-		br.Process()
+		bridgeProcessAtLeastOne(br)
 
 		closeAssociationPair(br, a0, a1)
 	})
 
 	t.Run("ChannelTypeReliableUnordered", func(t *testing.T) {
+		// Limit runtime in case of deadlocks
+		lim := test.TimeOut(time.Second * 10)
+		defer lim.Stop()
+
 		sbuf := make([]byte, 1000)
 		rbuf := make([]byte, 1500)
 
@@ -331,13 +358,13 @@ func TestDataChannel(t *testing.T) {
 
 		dc0, err := Dial(a0, 100, cfg)
 		assert.Nil(t, err, "Dial() should succeed")
-		br.Process()
+		bridgeProcessAtLeastOne(br)
 
 		dc1, err := Accept(a1, &Config{
 			LoggerFactory: loggerFactory,
 		})
 		assert.Nil(t, err, "Accept() should succeed")
-		br.Process()
+		bridgeProcessAtLeastOne(br)
 
 		assert.True(t, reflect.DeepEqual(dc0.Config, *cfg), "local config should match")
 		assert.True(t, reflect.DeepEqual(dc1.Config, *cfg), "remote config should match")
@@ -357,7 +384,7 @@ func TestDataChannel(t *testing.T) {
 		time.Sleep(100 * time.Millisecond)
 		err = br.Reorder(0) // reordering on the wire
 		assert.Nil(t, err, "reorder failed")
-		br.Process()
+		bridgeProcessAtLeastOne(br)
 
 		var isString bool
 
@@ -375,7 +402,7 @@ func TestDataChannel(t *testing.T) {
 		dc0.Close()
 		//nolint:errcheck,gosec
 		dc1.Close()
-		br.Process()
+		bridgeProcessAtLeastOne(br)
 
 		closeAssociationPair(br, a0, a1)
 	})
@@ -414,7 +441,7 @@ func TestDataChannelBufferedAmount(t *testing.T) {
 		LoggerFactory: loggerFactory,
 	})
 	assert.Nil(t, err, "Dial() should succeed")
-	br.Process()
+	bridgeProcessAtLeastOne(br)
 
 	dc1, err := Accept(a1, &Config{
 		LoggerFactory: loggerFactory,
@@ -422,7 +449,7 @@ func TestDataChannelBufferedAmount(t *testing.T) {
 	assert.Nil(t, err, "Accept() should succeed")
 
 	for dc0.BufferedAmount() > 0 {
-		br.Process()
+		bridgeProcessAtLeastOne(br)
 	}
 
 	dc0.SetBufferedAmountLowThreshold(1500)
@@ -464,7 +491,7 @@ func TestDataChannelBufferedAmount(t *testing.T) {
 	//nolint:errcheck,gosec
 	dc1.Close()
 
-	br.Process()
+	bridgeProcessAtLeastOne(br)
 
 	assert.True(t, nCbs > 0, "should make at least one callback")
 
@@ -493,13 +520,13 @@ func TestStats(t *testing.T) {
 
 	dc0, err := Dial(a0, 100, cfg)
 	assert.NoError(t, err, "Dial() should succeed")
-	br.Process()
+	bridgeProcessAtLeastOne(br)
 
 	dc1, err := Accept(a1, &Config{
 		LoggerFactory: loggerFactory,
 	})
 	assert.NoError(t, err, "Accept() should succeed")
-	br.Process()
+	bridgeProcessAtLeastOne(br)
 
 	var bytesSent uint64
 	var n int
@@ -520,7 +547,7 @@ func TestStats(t *testing.T) {
 	assert.Equal(t, dc0.BytesSent(), bytesSent)
 	assert.Equal(t, dc0.MessagesSent(), uint32(2))
 
-	br.Process()
+	bridgeProcessAtLeastOne(br)
 
 	var bytesRead uint64
 
@@ -540,7 +567,7 @@ func TestStats(t *testing.T) {
 
 	assert.NoError(t, dc0.Close())
 	assert.NoError(t, dc1.Close())
-	br.Process()
+	bridgeProcessAtLeastOne(br)
 
 	closeAssociationPair(br, a0, a1)
 }
