@@ -4,6 +4,7 @@ package datachannel
 import (
 	"fmt"
 	"io"
+	"sync"
 	"sync/atomic"
 
 	"github.com/pion/logging"
@@ -44,6 +45,11 @@ type DataChannel struct {
 	messagesReceived uint32
 	bytesSent        uint64
 	bytesReceived    uint64
+
+	mu              sync.Mutex
+	onOpenHandler   func()
+	openHandlerOnce sync.Once
+	open            bool
 
 	stream *sctp.Stream
 	log    logging.LeveledLogger
@@ -228,6 +234,35 @@ func (c *DataChannel) MessagesReceived() uint32 {
 	return atomic.LoadUint32(&c.messagesReceived)
 }
 
+// OnOpen sets an event handler which is invoked when a DATA_CHANNEL_ACK message
+// is received or sent on the stream.
+func (c *DataChannel) OnOpen(f func()) {
+	c.mu.Lock()
+	c.openHandlerOnce = sync.Once{}
+	c.onOpenHandler = f
+	open := c.open
+	c.mu.Unlock()
+
+	if open {
+		go c.openHandlerOnce.Do(func() {
+			f()
+		})
+	}
+}
+
+func (c *DataChannel) onOpen() {
+	c.mu.Lock()
+	c.open = true
+	hdlr := c.onOpenHandler
+	c.mu.Unlock()
+
+	if hdlr != nil {
+		go c.openHandlerOnce.Do(func() {
+			hdlr()
+		})
+	}
+}
+
 // BytesSent returns the number of bytes sent
 func (c *DataChannel) BytesSent() uint64 {
 	return atomic.LoadUint64(&c.bytesSent)
@@ -255,12 +290,9 @@ func (c *DataChannel) handleDCEP(data []byte) error {
 		if err != nil {
 			return fmt.Errorf("failed to ACK channel open: %v", err)
 		}
-		// TODO: Should not happen?
-
+		c.onOpen()
 	case *channelAck:
-		// TODO: handle ChannelAck (https://tools.ietf.org/html/draft-ietf-rtcweb-data-protocol-09#section-5.2)
-		// TODO: handle?
-
+		c.onOpen()
 	default:
 		return fmt.Errorf("unhandled DataChannel message %v", msg)
 	}
