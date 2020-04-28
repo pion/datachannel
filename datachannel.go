@@ -179,6 +179,8 @@ func Server(stream *sctp.Stream, config *Config) (*DataChannel, error) {
 	if err != nil {
 		return nil, err
 	}
+	dataChannel.onOpen()
+
 	return dataChannel, nil
 }
 

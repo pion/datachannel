@@ -2,6 +2,7 @@ package datachannel
 
 import (
 	"encoding/binary"
+	"net"
 	"reflect"
 	"testing"
 	"time"
@@ -570,4 +571,119 @@ func TestStats(t *testing.T) {
 	bridgeProcessAtLeastOne(br)
 
 	closeAssociationPair(br, a0, a1)
+}
+
+func TestDataChannel_OnOpen(t *testing.T) {
+	conn0, conn1 := net.Pipe()
+	loggerFactory := logging.NewDefaultLoggerFactory()
+
+	resultCh := make(chan struct {
+		*sctp.Association
+		error
+	})
+	go func() {
+		a0, err := sctp.Server(sctp.Config{
+			NetConn:       conn0,
+			LoggerFactory: loggerFactory,
+		})
+		resultCh <- struct {
+			*sctp.Association
+			error
+		}{a0, err}
+	}()
+	go func() {
+		a1, err := sctp.Client(sctp.Config{
+			NetConn:       conn1,
+			LoggerFactory: loggerFactory,
+		})
+		resultCh <- struct {
+			*sctp.Association
+			error
+		}{a1, err}
+	}()
+
+	var a0, a1 *sctp.Association
+SCTPLoop:
+	for {
+		select {
+		case <-time.After(time.Second * 10):
+			assert.FailNow(t, "sctp Association handshake failed to complete in 10s")
+		case result := <-resultCh:
+			if !assert.Nil(t, result.error, "sctp Association handshake failed") {
+				assert.FailNow(t, "failed due to earlier error")
+			}
+			if a0 == nil {
+				a0 = result.Association
+			} else {
+				a1 = result.Association
+				break SCTPLoop
+			}
+		}
+	}
+	defer func() {
+		a0.Close() // nolint: gosec,errcheck
+		a1.Close() // nolint: gosec,errcheck
+	}()
+
+	dc0OpenCh := make(chan struct{}, 2)
+	dc0, err := Dial(a0, 100, &Config{
+		ChannelType:          ChannelTypeReliable,
+		ReliabilityParameter: 123,
+		Label:                "data",
+		LoggerFactory:        loggerFactory,
+	})
+	if !assert.Nil(t, err, "Dial() should succeed") {
+		assert.FailNow(t, "failed due to earlier error")
+	}
+	dc0.OnOpen(func() {
+		dc0OpenCh <- struct{}{}
+	})
+
+	dc1OpenCh := make(chan struct{}, 2)
+	dc1, err := Accept(a1, &Config{
+		LoggerFactory: loggerFactory,
+	})
+	if !assert.Nil(t, err, "Accept() should succeed") {
+		assert.FailNow(t, "failed due to earlier error")
+	}
+	dc1.OnOpen(func() {
+		dc1OpenCh <- struct{}{}
+	})
+
+	// we need a read loop to handle DCEP messages as ReadDataChannel() is the
+	// only caller of handleDCEP()
+	go func() {
+		for {
+			buff := make([]byte, 1000)
+			dc0.Read(buff) //nolint: errcheck,gosec
+		}
+	}()
+	go func() {
+		for {
+			buff := make([]byte, 1000)
+			dc1.Read(buff) //nolint: errcheck,gosec
+		}
+	}()
+
+	oneSideOpen := false
+OpenLoop:
+	for {
+		select {
+		case <-time.After(time.Second * 10):
+			assert.FailNow(t, "OnOpen() failed to fire on both sides within 10s")
+		case <-dc0OpenCh:
+			if oneSideOpen {
+				break OpenLoop
+			}
+			oneSideOpen = true
+		case <-dc1OpenCh:
+			if oneSideOpen {
+				break OpenLoop
+			}
+			oneSideOpen = true
+		}
+	}
+
+	assert.Len(t, dc0OpenCh, 0)
+	assert.Len(t, dc1OpenCh, 0)
 }
