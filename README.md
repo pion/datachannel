@@ -40,6 +40,7 @@ Check out the **[contributing wiki](https://github.com/pion/webrtc/wiki/Contribu
 * [Hugo Arregui](https://github.com/hugoArregui)
 * [Atsushi Watanabe](https://github.com/at-wat)
 * [Jordan Whited](https://github.com/jwhited)
+* [Norman Rasmussen](https://github.com/normanr) - *Fix Empty DataChannel messages*
 
 ### License
 MIT License - see [LICENSE](LICENSE) for full text

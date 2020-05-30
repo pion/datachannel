@@ -453,6 +453,26 @@ func TestDataChannelBufferedAmount(t *testing.T) {
 		bridgeProcessAtLeastOne(br)
 	}
 
+	n, err := dc0.Write([]byte{})
+	assert.Nil(t, err, "Write() should succeed")
+	assert.Equal(t, 0, n, "data length should match")
+	assert.Equal(t, uint64(1), dc0.BufferedAmount(), "incorrect bufferedAmount")
+
+	n, err = dc0.Write([]byte{0})
+	assert.Nil(t, err, "Write() should succeed")
+	assert.Equal(t, 1, n, "data length should match")
+	assert.Equal(t, uint64(2), dc0.BufferedAmount(), "incorrect bufferedAmount")
+
+	bridgeProcessAtLeastOne(br)
+
+	n, err = dc1.Read(rData)
+	assert.Nil(t, err, "Read() should succeed")
+	assert.Equal(t, n, 0, "received length should match")
+
+	n, err = dc1.Read(rData)
+	assert.Nil(t, err, "Read() should succeed")
+	assert.Equal(t, n, 1, "received length should match")
+
 	dc0.SetBufferedAmountLowThreshold(1500)
 	assert.Equal(t, uint64(1500), dc0.BufferedAmountLowThreshold(), "incorrect bufferedAmountLowThreshold")
 	dc0.OnBufferedAmountLow(func() {
@@ -465,7 +485,7 @@ func TestDataChannelBufferedAmount(t *testing.T) {
 		n, err = dc0.Write(sData)
 		assert.Nil(t, err, "Write() should succeed")
 		assert.Equal(t, len(sData), n, "data length should match")
-		assert.Equal(t, uint64(len(sData)*(i+1)), dc0.BufferedAmount(), "incorrect bufferedAmount")
+		assert.Equal(t, uint64(len(sData)*(i+1)+2), dc0.BufferedAmount(), "incorrect bufferedAmount")
 	}
 
 	go func() {
@@ -548,6 +568,21 @@ func TestStats(t *testing.T) {
 	assert.Equal(t, dc0.BytesSent(), bytesSent)
 	assert.Equal(t, dc0.MessagesSent(), uint32(2))
 
+	n, err = dc0.Write([]byte{0})
+	assert.NoError(t, err, "Write() should succeed")
+	assert.Equal(t, 1, n, "data length should match")
+	bytesSent += uint64(n)
+
+	assert.Equal(t, dc0.BytesSent(), bytesSent)
+	assert.Equal(t, dc0.MessagesSent(), uint32(3))
+
+	n, err = dc0.Write([]byte{})
+	assert.NoError(t, err, "Write() should succeed")
+	assert.Equal(t, 0, n, "data length should match")
+
+	assert.Equal(t, dc0.BytesSent(), bytesSent)
+	assert.Equal(t, dc0.MessagesSent(), uint32(4))
+
 	bridgeProcessAtLeastOne(br)
 
 	var bytesRead uint64
@@ -565,6 +600,21 @@ func TestStats(t *testing.T) {
 
 	assert.Equal(t, dc1.BytesReceived(), bytesRead)
 	assert.Equal(t, dc1.MessagesReceived(), uint32(2))
+
+	n, err = dc1.Read(rbuf)
+	assert.NoError(t, err, "Read() should succeed")
+	bytesRead += uint64(n)
+
+	assert.Equal(t, n, 1)
+	assert.Equal(t, dc1.BytesReceived(), bytesRead)
+	assert.Equal(t, dc1.MessagesReceived(), uint32(3))
+
+	n, err = dc1.Read(rbuf)
+	assert.NoError(t, err, "Read() should succeed")
+
+	assert.Equal(t, n, 0)
+	assert.Equal(t, dc1.BytesReceived(), bytesRead)
+	assert.Equal(t, dc1.MessagesReceived(), uint32(4))
 
 	assert.NoError(t, dc0.Close())
 	assert.NoError(t, dc1.Close())
