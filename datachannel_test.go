@@ -152,6 +152,11 @@ func prOrderedTest(t *testing.T, channelType ChannelType) {
 	assert.True(t, reflect.DeepEqual(dc0.Config, *cfg), "local config should match")
 	assert.True(t, reflect.DeepEqual(dc1.Config, *cfg), "remote config should match")
 
+	err = dc0.commitReliabilityParams()
+	assert.NoError(t, err, "should succeed")
+	err = dc1.commitReliabilityParams()
+	assert.NoError(t, err, "should succeed")
+
 	var n int
 
 	binary.BigEndian.PutUint32(sbuf, 1)
@@ -216,6 +221,11 @@ func prUnorderedTest(t *testing.T, channelType ChannelType) {
 
 	assert.True(t, reflect.DeepEqual(dc0.Config, *cfg), "local config should match")
 	assert.True(t, reflect.DeepEqual(dc1.Config, *cfg), "remote config should match")
+
+	err = dc0.commitReliabilityParams()
+	assert.NoError(t, err, "should succeed")
+	err = dc1.commitReliabilityParams()
+	assert.NoError(t, err, "should succeed")
 
 	var n int
 
@@ -368,6 +378,11 @@ func TestDataChannel(t *testing.T) {
 
 		assert.True(t, reflect.DeepEqual(dc0.Config, *cfg), "local config should match")
 		assert.True(t, reflect.DeepEqual(dc1.Config, *cfg), "remote config should match")
+
+		err = dc0.commitReliabilityParams()
+		assert.NoError(t, err, "should succeed")
+		err = dc1.commitReliabilityParams()
+		assert.NoError(t, err, "should succeed")
 
 		var n int
 
