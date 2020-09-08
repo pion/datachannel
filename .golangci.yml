@@ -5,7 +5,37 @@ linters-settings:
     locale: US
 
 linters:
-  enable-all: true
+  enable:
+    - deadcode
+    - depguard
+    - dogsled
+    - dupl
+    - errcheck
+    - goanalysis_metalinter
+    - gochecknoglobals
+    - gochecknoinits
+    - goconst
+    - gocritic
+    - gocyclo
+    - gofmt
+    - goimports
+    - golint
+    - gosec (gas)
+    - ineffassign
+    - interfacer
+    - lll
+    - maligned
+    - misspell
+    - nakedret
+    - prealloc
+    - scopelint
+    - structcheck
+    - typecheck
+    - unconvert
+    - unparam
+    - unused
+    - varcheck
+    - whitespace
   disable:
     - funlen
     - godox
