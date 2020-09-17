@@ -161,12 +161,12 @@ func prOrderedTest(t *testing.T, channelType ChannelType) {
 
 	binary.BigEndian.PutUint32(sbuf, 1)
 	n, err = dc0.WriteDataChannel(sbuf, true)
-	assert.Nil(t, err, "Read() should succeed")
+	assert.Nil(t, err, "WriteDataChannel() should succeed")
 	assert.Equal(t, len(sbuf), n, "data length should match")
 
 	binary.BigEndian.PutUint32(sbuf, 2)
 	n, err = dc0.WriteDataChannel(sbuf, true)
-	assert.Nil(t, err, "Read() should succeed")
+	assert.Nil(t, err, "WriteDataChannel() should succeed")
 	assert.Equal(t, len(sbuf), n, "data length should match")
 
 	time.Sleep(100 * time.Millisecond)
@@ -629,6 +629,54 @@ func TestStats(t *testing.T) {
 	assert.Equal(t, n, 0)
 	assert.Equal(t, dc1.BytesReceived(), bytesRead)
 	assert.Equal(t, dc1.MessagesReceived(), uint32(4))
+
+	assert.NoError(t, dc0.Close())
+	assert.NoError(t, dc1.Close())
+	bridgeProcessAtLeastOne(br)
+
+	closeAssociationPair(br, a0, a1)
+}
+
+func TestDataChannelAcceptWrite(t *testing.T) {
+	loggerFactory := logging.NewDefaultLoggerFactory()
+
+	br := test.NewBridge()
+
+	in := []byte("HELLO WORLD")
+	out := make([]byte, 100)
+
+	a0, a1, err := createNewAssociationPair(br)
+	if !assert.Nil(t, err, "failed to create associations") {
+		assert.FailNow(t, "failed due to earlier error")
+	}
+
+	cfg := &Config{
+		ChannelType:          ChannelTypeReliable,
+		ReliabilityParameter: 123,
+		Label:                "data",
+		LoggerFactory:        loggerFactory,
+	}
+
+	dc0, err := Dial(a0, 100, cfg)
+	assert.NoError(t, err, "Dial() should succeed")
+	bridgeProcessAtLeastOne(br)
+
+	dc1, err := Accept(a1, &Config{
+		LoggerFactory: loggerFactory,
+	})
+	assert.NoError(t, err, "Accept() should succeed")
+	bridgeProcessAtLeastOne(br)
+
+	n, err := dc1.WriteDataChannel(in, true)
+	assert.Nil(t, err)
+	assert.Equal(t, len(in), n)
+	bridgeProcessAtLeastOne(br)
+
+	n, isString, err := dc0.ReadDataChannel(out)
+	assert.NoError(t, err)
+	assert.True(t, isString)
+	assert.Equal(t, len(in), n)
+	assert.Equal(t, in, out[:n])
 
 	assert.NoError(t, dc0.Close())
 	assert.NoError(t, dc1.Close())
