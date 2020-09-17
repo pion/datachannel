@@ -33,7 +33,7 @@ func (t messageType) String() string {
 // parse accepts raw input and returns a DataChannel message
 func parse(raw []byte) (message, error) {
 	if len(raw) == 0 {
-		return nil, fmt.Errorf("DataChannel message is not long enough to determine type ")
+		return nil, ErrDataChannelMessageTooShort
 	}
 
 	var msg message
@@ -43,7 +43,7 @@ func parse(raw []byte) (message, error) {
 	case dataChannelAck:
 		msg = &channelAck{}
 	default:
-		return nil, fmt.Errorf("Unknown MessageType %v", messageType(raw[0]))
+		return nil, fmt.Errorf("%w %v", ErrInvalidMessageType, messageType(raw[0]))
 	}
 
 	if err := msg.Unmarshal(raw); err != nil {
@@ -57,11 +57,11 @@ func parse(raw []byte) (message, error) {
 // or throws an error
 func parseExpectDataChannelOpen(raw []byte) (*channelOpen, error) {
 	if len(raw) == 0 {
-		return nil, fmt.Errorf("the DataChannel message is not long enough to determine type")
+		return nil, ErrDataChannelMessageTooShort
 	}
 
 	if actualTyp := messageType(raw[0]); actualTyp != dataChannelOpen {
-		return nil, fmt.Errorf("expected DataChannelOpen but got %s", actualTyp)
+		return nil, fmt.Errorf("%w expected(%s) actual(%s)", ErrUnexpectedDataChannelType, actualTyp, dataChannelOpen)
 	}
 
 	msg := &channelOpen{}
