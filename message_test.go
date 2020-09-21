@@ -3,7 +3,7 @@ package datachannel
 import (
 	"testing"
 
-	"github.com/pkg/errors"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestChannelOpenMarshal(t *testing.T) {
@@ -71,28 +71,14 @@ func TestChannelOpenUnmarshal(t *testing.T) {
 	msgUncast, err := parse(rawMsg)
 
 	msg, ok := msgUncast.(*channelOpen)
-	if !ok {
-		t.Error(errors.Errorf("Failed to cast to ChannelOpen"))
-	}
+	assert.True(t, ok, "Failed to cast to ChannelOpen")
 
-	if err != nil {
-		t.Fatal(errors.Wrap(err, "Unmarshal failed, ChannelOpen"))
-	}
-	if msg.ChannelType != ChannelTypeReliable {
-		t.Fatal(errors.Errorf("ChannelType should be 0"))
-	}
-	if msg.Priority != 0 {
-		t.Fatal(errors.Errorf("Priority should be 0"))
-	}
-	if msg.ReliabilityParameter != 0 {
-		t.Fatal(errors.Errorf("ReliabilityParameter should be 0"))
-	}
-	if string(msg.Label) != "foo" {
-		t.Fatal(errors.Errorf("msg Label should be 'foo'"))
-	}
-	if string(msg.Protocol) != "bar" {
-		t.Fatal(errors.Errorf("msg protocol should be 'bar'"))
-	}
+	assert.NoError(t, err, "Unmarshal failed, ChannelOpen")
+	assert.Equal(t, msg.ChannelType, ChannelTypeReliable, "ChannelType should be 0")
+	assert.Equal(t, msg.Priority, uint16(0), "Priority should be 0")
+	assert.Equal(t, msg.ReliabilityParameter, uint32(0), "ReliabilityParameter should be 0")
+	assert.Equal(t, msg.Label, []uint8("foo"), "msg Label should be 'foo'")
+	assert.Equal(t, msg.Protocol, []uint8("bar"), "msg protocol should be 'bar'")
 }
 
 func TestChannelAckUnmarshal(t *testing.T) {
@@ -104,7 +90,5 @@ func TestChannelAckUnmarshal(t *testing.T) {
 	}
 
 	_, ok := msgUncast.(*channelAck)
-	if !ok {
-		t.Error(errors.Errorf("Failed to cast to ChannelAck"))
-	}
+	assert.True(t, ok, "Failed to cast to ChannelAck")
 }

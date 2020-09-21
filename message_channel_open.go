@@ -2,8 +2,7 @@ package datachannel
 
 import (
 	"encoding/binary"
-
-	"github.com/pkg/errors"
+	"fmt"
 )
 
 /*
@@ -104,7 +103,7 @@ func (c *channelOpen) Marshal() ([]byte, error) {
 // Unmarshal populates the struct with the given raw data
 func (c *channelOpen) Unmarshal(raw []byte) error {
 	if len(raw) < channelOpenHeaderLength {
-		return errors.Errorf("Length of input is not long enough to satisfy header %d", len(raw))
+		return fmt.Errorf("Length of input is not long enough to satisfy header %d", len(raw))
 	}
 	c.ChannelType = ChannelType(raw[1])
 	c.Priority = binary.BigEndian.Uint16(raw[2:])
@@ -114,7 +113,7 @@ func (c *channelOpen) Unmarshal(raw []byte) error {
 	protocolLength := binary.BigEndian.Uint16(raw[10:])
 
 	if len(raw) != int(channelOpenHeaderLength+labelLength+protocolLength) {
-		return errors.Errorf("Label + Protocol length don't match full packet length")
+		return fmt.Errorf("Label + Protocol length don't match full packet length")
 	}
 
 	c.Label = raw[channelOpenHeaderLength : channelOpenHeaderLength+labelLength]

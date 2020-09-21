@@ -8,7 +8,6 @@ import (
 
 	"github.com/pion/logging"
 	"github.com/pion/sctp"
-	"github.com/pkg/errors"
 )
 
 const receiveMTU = 8192
@@ -138,7 +137,7 @@ func Server(stream *sctp.Stream, config *Config) (*DataChannel, error) {
 
 	openMsg, err := parseExpectDataChannelOpen(buffer[:n])
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to parse DataChannelOpen packet")
+		return nil, fmt.Errorf("failed to parse DataChannelOpen packet %w", err)
 	}
 
 	config.ChannelType = openMsg.ChannelType
@@ -238,7 +237,7 @@ func (c *DataChannel) StreamIdentifier() uint16 {
 func (c *DataChannel) handleDCEP(data []byte) error {
 	msg, err := parse(data)
 	if err != nil {
-		return errors.Wrap(err, "Failed to parse DataChannel packet")
+		return fmt.Errorf("Failed to parse DataChannel packet %w", err)
 	}
 
 	switch msg := msg.(type) {
