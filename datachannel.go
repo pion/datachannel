@@ -126,7 +126,7 @@ func Accept(a *sctp.Association, config *Config) (*DataChannel, error) {
 
 // Server accepts a data channel over an SCTP stream
 func Server(stream *sctp.Stream, config *Config) (*DataChannel, error) {
-	buffer := make([]byte, receiveMTU) // TODO: Can probably be smaller
+	buffer := make([]byte, receiveMTU)
 	n, ppi, err := stream.ReadSCTP(buffer)
 	if err != nil {
 		return nil, err
