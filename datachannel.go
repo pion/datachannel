@@ -43,6 +43,7 @@ type DataChannel struct {
 	messagesReceived uint32
 	bytesSent        uint64
 	bytesReceived    uint64
+	acknowledged     bool
 
 	stream *sctp.Stream
 	log    logging.LeveledLogger
@@ -235,6 +236,7 @@ func (c *DataChannel) handleDCEP(data []byte) error {
 	switch msg := msg.(type) {
 	case *channelAck:
 		c.log.Debug("Received DATA_CHANNEL_ACK")
+		c.acknowledged = true
 		if err = c.commitReliabilityParams(); err != nil {
 			return err
 		}
