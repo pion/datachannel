@@ -684,3 +684,54 @@ func TestDataChannelAcceptWrite(t *testing.T) {
 
 	closeAssociationPair(br, a0, a1)
 }
+
+func TestOnOpen(t *testing.T) {
+	loggerFactory := logging.NewDefaultLoggerFactory()
+
+	br := test.NewBridge()
+	a0, a1, err := createNewAssociationPair(br)
+	assert.NoError(t, err)
+
+	dc0, err := Dial(a0, 100, &Config{
+		ChannelType:          ChannelTypeReliable,
+		ReliabilityParameter: 123,
+		Label:                "data",
+		LoggerFactory:        loggerFactory,
+	})
+	assert.NoError(t, err, "Dial() should succeed")
+	bridgeProcessAtLeastOne(br)
+
+	dc1, err := Accept(a1, &Config{
+		LoggerFactory: loggerFactory,
+	})
+	assert.NoError(t, err, "Accept() should succeed")
+	bridgeProcessAtLeastOne(br)
+
+	openCompleted := make(chan bool)
+	dc0.OnOpen(func() {
+		close(openCompleted)
+	})
+
+	in := []byte("HELLO WORLD")
+	out := make([]byte, 100)
+
+	bridgeProcessAtLeastOne(br)
+	_, err = dc1.WriteDataChannel(in, true)
+	assert.NoError(t, err)
+
+	bridgeProcessAtLeastOne(br)
+	_, _, err = dc0.ReadDataChannel(out)
+	assert.NoError(t, err)
+
+	select {
+	case <-time.After(time.Second * 10):
+		assert.FailNow(t, "OnOpen() failed to fire 10s")
+	case <-openCompleted:
+	}
+
+	assert.NoError(t, dc0.Close())
+	assert.NoError(t, dc1.Close())
+	bridgeProcessAtLeastOne(br)
+
+	closeAssociationPair(br, a0, a1)
+}

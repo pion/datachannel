@@ -4,6 +4,7 @@ package datachannel
 import (
 	"fmt"
 	"io"
+	"sync"
 	"sync/atomic"
 
 	"github.com/pion/logging"
@@ -43,6 +44,10 @@ type DataChannel struct {
 	messagesReceived uint32
 	bytesSent        uint64
 	bytesReceived    uint64
+
+	mu                      sync.Mutex
+	onOpenCompleteHandler   func()
+	openCompleteHandlerOnce sync.Once
 
 	stream *sctp.Stream
 	log    logging.LeveledLogger
@@ -211,6 +216,29 @@ func (c *DataChannel) MessagesReceived() uint32 {
 	return atomic.LoadUint32(&c.messagesReceived)
 }
 
+// OnOpen sets an event handler which is invoked when
+// a DATA_CHANNEL_ACK message is received.
+// The handler is called only on thefor the channel opened
+// https://datatracker.ietf.org/doc/html/draft-ietf-rtcweb-data-protocol-09#section-5.2
+func (c *DataChannel) OnOpen(f func()) {
+	c.mu.Lock()
+	c.openCompleteHandlerOnce = sync.Once{}
+	c.onOpenCompleteHandler = f
+	c.mu.Unlock()
+}
+
+func (c *DataChannel) onOpenComplete() {
+	c.mu.Lock()
+	hdlr := c.onOpenCompleteHandler
+	c.mu.Unlock()
+
+	if hdlr != nil {
+		go c.openCompleteHandlerOnce.Do(func() {
+			hdlr()
+		})
+	}
+}
+
 // BytesSent returns the number of bytes sent
 func (c *DataChannel) BytesSent() uint64 {
 	return atomic.LoadUint64(&c.bytesSent)
@@ -238,6 +266,7 @@ func (c *DataChannel) handleDCEP(data []byte) error {
 		if err = c.commitReliabilityParams(); err != nil {
 			return err
 		}
+		c.onOpenComplete()
 	default:
 		return fmt.Errorf("%w %s", ErrInvalidMessageType, msg)
 	}
