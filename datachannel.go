@@ -112,10 +112,16 @@ func Client(stream *sctp.Stream, config *Config) (*DataChannel, error) {
 }
 
 // Accept is used to accept incoming data channels over SCTP
-func Accept(a *sctp.Association, config *Config) (*DataChannel, error) {
+func Accept(a *sctp.Association, config *Config, existingChannels ...*DataChannel) (*DataChannel, error) {
 	stream, err := a.AcceptStream()
 	if err != nil {
 		return nil, err
+	}
+	for _, ch := range existingChannels {
+		if ch.StreamIdentifier() == stream.StreamIdentifier() {
+			ch.stream.SetDefaultPayloadType(sctp.PayloadTypeWebRTCBinary)
+			return ch, nil
+		}
 	}
 
 	stream.SetDefaultPayloadType(sctp.PayloadTypeWebRTCBinary)
