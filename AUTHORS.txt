@@ -5,6 +5,8 @@
 # see `.github/generate-authors.sh` for the scripting
 Atsushi Watanabe <atsushi.w@ieee.org>
 backkem <mail@backkem.me>
+Benny Daon <benny@tuzig.com>
+Eric Daniels <eric@erdaniels.com>
 Hugo Arregui <hugo.arregui@gmail.com>
 Hugo Arregui <hugo@decentraland.org>
 John Bradley <jrb@turrettech.com>
