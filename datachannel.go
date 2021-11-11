@@ -274,7 +274,7 @@ func (c *DataChannel) handleDCEP(data []byte) error {
 		}
 		c.onOpenComplete()
 	default:
-		return fmt.Errorf("%w %s", ErrInvalidMessageType, msg)
+		return fmt.Errorf("%w %v", ErrInvalidMessageType, msg)
 	}
 
 	return nil
