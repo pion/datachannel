@@ -2,6 +2,7 @@
 package datachannel
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"sync"
@@ -184,7 +185,7 @@ func (c *DataChannel) Read(p []byte) (int, error) {
 func (c *DataChannel) ReadDataChannel(p []byte) (int, bool, error) {
 	for {
 		n, ppi, err := c.stream.ReadSCTP(p)
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			// When the peer sees that an incoming stream was
 			// reset, it also resets its corresponding outgoing stream.
 			if closeErr := c.stream.Close(); closeErr != nil {
