@@ -2,6 +2,7 @@ package datachannel
 
 import (
 	"encoding/binary"
+	"os"
 	"reflect"
 	"testing"
 	"time"
@@ -734,4 +735,38 @@ func TestOnOpen(t *testing.T) {
 	bridgeProcessAtLeastOne(br)
 
 	closeAssociationPair(br, a0, a1)
+}
+
+func TestReadDeadline(t *testing.T) {
+	loggerFactory := logging.NewDefaultLoggerFactory()
+
+	br := test.NewBridge()
+
+	a0, a1, err := createNewAssociationPair(br)
+	if !assert.Nil(t, err, "failed to create associations") {
+		assert.FailNow(t, "failed due to earlier error")
+	}
+
+	cfg := &Config{
+		ChannelType:          ChannelTypeReliable,
+		ReliabilityParameter: 123,
+		Label:                "data",
+		LoggerFactory:        loggerFactory,
+	}
+
+	dc0, err := Dial(a0, 100, cfg)
+	assert.NoError(t, err, "Dial() should succeed")
+	bridgeProcessAtLeastOne(br)
+
+	_, err = Accept(a1, &Config{
+		LoggerFactory: loggerFactory,
+	})
+	assert.NoError(t, err, "Accept() should succeed")
+	bridgeProcessAtLeastOne(br)
+
+	err = dc0.SetReadDeadline(time.Now().Add(200 * time.Millisecond))
+	assert.NoError(t, err, "SetReadDeadline() should succeed")
+
+	_, err = dc0.Read(make([]byte, 1500))
+	assert.ErrorIs(t, err, os.ErrDeadlineExceeded)
 }
