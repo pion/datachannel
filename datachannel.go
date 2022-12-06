@@ -7,6 +7,7 @@ import (
 	"io"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/pion/logging"
 	"github.com/pion/sctp"
@@ -18,6 +19,7 @@ const receiveMTU = 8192
 // that also returns if the message is text.
 type Reader interface {
 	ReadDataChannel([]byte) (int, bool, error)
+	SetReadDeadline(time.Time) error
 }
 
 // Writer is an extended io.Writer
@@ -211,6 +213,11 @@ func (c *DataChannel) ReadDataChannel(p []byte) (int, bool, error) {
 		isString := ppi == sctp.PayloadTypeWebRTCString || ppi == sctp.PayloadTypeWebRTCStringEmpty
 		return n, isString, err
 	}
+}
+
+// SetReadDeadline sets a deadline for reads to return
+func (c *DataChannel) SetReadDeadline(t time.Time) error {
+	return c.stream.SetReadDeadline(t)
 }
 
 // MessagesSent returns the number of messages sent
