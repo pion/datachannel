@@ -19,6 +19,10 @@ const receiveMTU = 8192
 // that also returns if the message is text.
 type Reader interface {
 	ReadDataChannel([]byte) (int, bool, error)
+}
+
+// ReadDeadliner extends an io.Reader to expose setting a read deadline.
+type ReadDeadliner interface {
 	SetReadDeadline(time.Time) error
 }
 
