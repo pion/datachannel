@@ -2,6 +2,7 @@ package datachannel
 
 import (
 	"encoding/binary"
+	"io"
 	"os"
 	"reflect"
 	"testing"
@@ -769,4 +770,100 @@ func TestReadDeadline(t *testing.T) {
 
 	_, err = dc0.Read(make([]byte, 1500))
 	assert.ErrorIs(t, err, os.ErrDeadlineExceeded)
+}
+
+func TestClose(t *testing.T) {
+	loggerFactory := logging.NewDefaultLoggerFactory()
+	t.Run("RemoteClose", func(t *testing.T) {
+		br := test.NewBridge()
+
+		a0, a1, err := createNewAssociationPair(br)
+		if !assert.Nil(t, err, "failed to create associations") {
+			assert.FailNow(t, "failed due to earlier error")
+		}
+
+		cfg := &Config{
+			ChannelType:          ChannelTypeReliable,
+			ReliabilityParameter: 0,
+			Label:                "data",
+			LoggerFactory:        loggerFactory,
+		}
+
+		dc0, err := Dial(a0, 100, cfg)
+		assert.NoError(t, err, "Dial() should succeed")
+		bridgeProcessAtLeastOne(br)
+
+		dc1, err := Accept(a1, &Config{
+			LoggerFactory: loggerFactory,
+		})
+		assert.NoError(t, err, "Accept() should succeed")
+		bridgeProcessAtLeastOne(br)
+
+		assert.Equal(t, dc0.StreamIdentifier(), dc1.StreamIdentifier())
+
+		// Call bridgeProcessOne when reads are required
+		err = dc1.SetReadDeadline(time.Now().Add(2 * time.Second))
+		assert.NoError(t, err)
+		time.AfterFunc(100*time.Millisecond, func() {
+			_ = dc0.Close()
+			bridgeProcessAtLeastOne(br)
+		})
+		_, err = dc1.Read(make([]byte, 1500))
+		assert.ErrorIs(t, err, io.EOF)
+
+		bridgeProcessAtLeastOne(br)
+		_, err = dc0.Read(make([]byte, 1500))
+		assert.ErrorIs(t, err, io.EOF)
+	})
+
+	t.Run("CloseWhenReadActive", func(t *testing.T) {
+		br := test.NewBridge()
+
+		a0, a1, err := createNewAssociationPair(br)
+		if !assert.Nil(t, err, "failed to create associations") {
+			assert.FailNow(t, "failed due to earlier error")
+		}
+
+		cfg := &Config{
+			ChannelType:          ChannelTypeReliable,
+			ReliabilityParameter: 0,
+			Label:                "data",
+			LoggerFactory:        loggerFactory,
+		}
+
+		dc0, err := Dial(a0, 100, cfg)
+		assert.NoError(t, err, "Dial() should succeed")
+		bridgeProcessAtLeastOne(br)
+
+		dc1, err := Accept(a1, &Config{
+			LoggerFactory: loggerFactory,
+		})
+		assert.NoError(t, err, "Accept() should succeed")
+		bridgeProcessAtLeastOne(br)
+
+		assert.Equal(t, dc0.StreamIdentifier(), dc1.StreamIdentifier())
+
+		defer func() {
+			_ = dc0.Close()
+		}()
+
+		err = dc1.SetReadDeadline(time.Now().Add(2 * time.Second))
+		assert.NoError(t, err)
+
+		go func() {
+			_, closeErr := dc0.Read(make([]byte, 1500))
+			assert.ErrorIs(t, closeErr, io.EOF)
+			// Call bridgeProcessOne when reads are required,
+			// Here, dc1 would need to read the returning close message
+			bridgeProcessAtLeastOne(br)
+		}()
+
+		time.AfterFunc(100*time.Millisecond, func() {
+			closeErr := dc1.Close()
+			assert.NoError(t, closeErr, "Close() should succeed")
+			bridgeProcessAtLeastOne(br)
+		})
+		_, err = dc1.Read(make([]byte, 1500))
+		assert.ErrorIs(t, err, io.EOF)
+	})
 }
