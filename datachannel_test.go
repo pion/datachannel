@@ -772,7 +772,7 @@ func TestReadDeadline(t *testing.T) {
 	assert.ErrorIs(t, err, os.ErrDeadlineExceeded)
 }
 
-func TestCloseWhenReadActive(t *testing.T) {
+func TestRemoteClose(t *testing.T) {
 	loggerFactory := logging.NewDefaultLoggerFactory()
 
 	br := test.NewBridge()
@@ -784,27 +784,28 @@ func TestCloseWhenReadActive(t *testing.T) {
 
 	cfg := &Config{
 		ChannelType:          ChannelTypeReliable,
-		ReliabilityParameter: 123,
+		ReliabilityParameter: 0,
 		Label:                "data",
 		LoggerFactory:        loggerFactory,
 	}
 
-	dc, err := Dial(a0, 100, cfg)
+	dc0, err := Dial(a0, 100, cfg)
 	assert.NoError(t, err, "Dial() should succeed")
 	bridgeProcessAtLeastOne(br)
 
-	_, err = Accept(a1, &Config{
+	dc1, err := Accept(a1, &Config{
 		LoggerFactory: loggerFactory,
 	})
 	assert.NoError(t, err, "Accept() should succeed")
 	bridgeProcessAtLeastOne(br)
 
-	time.AfterFunc(100*time.Millisecond, func() {
-		dc.Close()
-	})
-
-	err = dc.SetReadDeadline(time.Now().Add(500 * time.Millisecond))
+	err = dc1.SetReadDeadline(time.Now().Add(2 * time.Second))
 	assert.NoError(t, err)
-	_, err = dc.Read(make([]byte, 1500))
+	time.AfterFunc(200*time.Millisecond, func() {
+		dc0.Close()
+	})
+	_, err = dc1.Read(make([]byte, 1500))
 	assert.ErrorIs(t, err, io.EOF)
+
+	dc1.Close()
 }
