@@ -14,6 +14,7 @@ John Bradley <jrb@turrettech.com>
 Norman Rasmussen <norman@rasmussen.co.za>
 Sean DuBois <seaduboi@amazon.com>
 Sean DuBois <sean@siobud.com>
+Steffen Vogel <post@steffenvogel.de>
 Yutaka Takeda <yt0916@gmail.com>
 
 # List of contributors not appearing in Git history
