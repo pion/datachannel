@@ -19,7 +19,7 @@ func (c *channelAck) Marshal() ([]byte, error) {
 }
 
 // Unmarshal populates the struct with the given raw data
-func (c *channelAck) Unmarshal(raw []byte) error {
+func (c *channelAck) Unmarshal(_ []byte) error {
 	// Message type already checked in Parse and there is no further data
 	return nil
 }
