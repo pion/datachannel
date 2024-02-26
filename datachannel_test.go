@@ -384,21 +384,16 @@ func TestDataChannel(t *testing.T) {
 		assert.True(t, reflect.DeepEqual(dc0.Config, *cfg), "local config should match")
 		assert.True(t, reflect.DeepEqual(dc1.Config, *cfg), "remote config should match")
 
-		err = dc0.commitReliabilityParams()
-		assert.NoError(t, err, "should succeed")
-		err = dc1.commitReliabilityParams()
-		assert.NoError(t, err, "should succeed")
-
 		var n int
 
 		binary.BigEndian.PutUint32(sbuf, 1)
 		n, err = dc0.WriteDataChannel(sbuf, true)
-		assert.Nil(t, err, "Read() should succeed")
+		assert.Nil(t, err, "Write() should succeed")
 		assert.Equal(t, len(sbuf), n, "data length should match")
 
 		binary.BigEndian.PutUint32(sbuf, 2)
 		n, err = dc0.WriteDataChannel(sbuf, true)
-		assert.Nil(t, err, "Read() should succeed")
+		assert.Nil(t, err, "Write() should succeed")
 		assert.Equal(t, len(sbuf), n, "data length should match")
 
 		time.Sleep(100 * time.Millisecond)
