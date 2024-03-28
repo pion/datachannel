@@ -11,6 +11,7 @@ import (
 type message interface {
 	Marshal() ([]byte, error)
 	Unmarshal([]byte) error
+	String() string
 }
 
 // messageType is the first byte in a DataChannel message that specifies type
