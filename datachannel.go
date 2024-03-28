@@ -287,7 +287,7 @@ func (c *DataChannel) handleDCEP(data []byte) error {
 	case *channelAck:
 		c.onOpenComplete()
 	default:
-		return fmt.Errorf("%w %v", ErrInvalidMessageType, msg)
+		return fmt.Errorf("%w, wanted ACK got %v", ErrUnexpectedDataChannelType, msg)
 	}
 
 	return nil

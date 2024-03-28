@@ -23,3 +23,7 @@ func (c *channelAck) Unmarshal(_ []byte) error {
 	// Message type already checked in Parse and there is no further data
 	return nil
 }
+
+func (c channelAck) String() string {
+	return "ACK"
+}

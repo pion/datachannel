@@ -75,6 +75,23 @@ const (
 	ChannelTypePartialReliableTimedUnordered ChannelType = 0x82
 )
 
+func (c ChannelType) String() string {
+	switch c {
+	case ChannelTypeReliable:
+	case ChannelTypeReliableUnordered:
+		return "ReliableUnordered"
+	case ChannelTypePartialReliableRexmit:
+		return "PartialReliableRexmit"
+	case ChannelTypePartialReliableRexmitUnordered:
+		return "PartialReliableRexmitUnordered"
+	case ChannelTypePartialReliableTimed:
+		return "PartialReliableTimed"
+	case ChannelTypePartialReliableTimedUnordered:
+		return "PartialReliableTimedUnordered"
+	}
+	return "Unknown"
+}
+
 // ChannelPriority enums
 const (
 	ChannelPriorityBelowNormal uint16 = 128
@@ -123,4 +140,8 @@ func (c *channelOpen) Unmarshal(raw []byte) error {
 	c.Label = raw[channelOpenHeaderLength : channelOpenHeaderLength+labelLength]
 	c.Protocol = raw[channelOpenHeaderLength+labelLength : channelOpenHeaderLength+labelLength+protocolLength]
 	return nil
+}
+
+func (c channelOpen) String() string {
+	return fmt.Sprintf("Open ChannelType(%s) Priority(%v) ReliabilityParameter(%d) Label(%s) Protocol(%s)", c.ChannelType, c.Priority, c.ReliabilityParameter, string(c.Label), string(c.Protocol))
 }

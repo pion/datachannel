@@ -95,3 +95,17 @@ func TestChannelAckUnmarshal(t *testing.T) {
 	_, ok := msgUncast.(*channelAck)
 	assert.True(t, ok, "Failed to cast to ChannelAck")
 }
+
+func TestChannelString(t *testing.T) {
+	channelString := channelOpen{
+		ChannelType:          ChannelTypeReliable,
+		Priority:             0,
+		ReliabilityParameter: 0,
+
+		Label:    []byte("foo"),
+		Protocol: []byte("bar"),
+	}.String()
+
+	assert.Equal(t, channelString, "Open ChannelType(Unknown) Priority(0) ReliabilityParameter(0) Label(foo) Protocol(bar)")
+	assert.Equal(t, channelAck{}.String(), "ACK")
+}
