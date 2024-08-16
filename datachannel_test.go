@@ -384,8 +384,34 @@ func TestDataChannel(t *testing.T) {
 		assert.True(t, reflect.DeepEqual(dc0.Config, *cfg), "local config should match")
 		assert.True(t, reflect.DeepEqual(dc1.Config, *cfg), "remote config should match")
 
+		// reliability parameters are committed after data channel open ACK is received on client side,
+		// wait for open to be completed
+		openCompleted := make(chan bool)
+		dc0.OnOpen(func() {
+			close(openCompleted)
+		})
+
 		var n int
 
+		// write a message as ReadChannel loops till user data is read
+		bridgeProcessAtLeastOne(br)
+		binary.BigEndian.PutUint32(sbuf, 10)
+		n, err = dc1.WriteDataChannel(sbuf, true)
+		assert.Nil(t, err, "Write() should succeed")
+		assert.Equal(t, len(sbuf), n, "data length should match")
+
+		// read data channel open ACK and the user message sent above
+		bridgeProcessAtLeastOne(br)
+		_, _, err = dc0.ReadDataChannel(rbuf)
+		assert.NoError(t, err)
+
+		select {
+		case <-time.After(time.Second * 10):
+			assert.FailNow(t, "OnOpen() failed to fire 10s")
+		case <-openCompleted:
+		}
+
+		// test unordered messages
 		binary.BigEndian.PutUint32(sbuf, 1)
 		n, err = dc0.WriteDataChannel(sbuf, true)
 		assert.Nil(t, err, "Write() should succeed")
