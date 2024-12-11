@@ -41,19 +41,13 @@ type WriteDeadliner interface {
 }
 
 // ReadWriteCloser is an extended io.ReadWriteCloser
-// that also implements our Reader and Writer.
+// that also implements our Reader, Writer and Deadliner.
 type ReadWriteCloser interface {
 	io.Reader
 	io.Writer
 	Reader
 	Writer
 	io.Closer
-}
-
-// ReadWriteCloserDeadliner is an extended ReadWriteCloser
-// that also implements r/w deadline.
-type ReadWriteCloserDeadliner interface {
-	ReadWriteCloser
 	ReadDeadliner
 	WriteDeadliner
 }
