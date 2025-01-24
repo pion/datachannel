@@ -22,6 +22,7 @@ func TestChannelOpenMarshal(t *testing.T) {
 	rawMsg, err := msg.Marshal()
 	if err != nil {
 		t.Errorf("Failed to marshal: %v", err)
+
 		return
 	}
 
@@ -32,12 +33,14 @@ func TestChannelOpenMarshal(t *testing.T) {
 
 	if len(rawMsg) != len(result) {
 		t.Errorf("%q != %q", rawMsg, result)
+
 		return
 	}
 
 	for i, v := range rawMsg {
 		if v != result[i] {
 			t.Errorf("%q != %q", rawMsg, result)
+
 			break
 		}
 	}
@@ -48,18 +51,21 @@ func TestChannelAckMarshal(t *testing.T) {
 	rawMsg, err := msg.Marshal()
 	if err != nil {
 		t.Errorf("Failed to marshal: %v", err)
+
 		return
 	}
 	result := []byte{0x02, 0x00, 0x00, 0x00}
 
 	if len(rawMsg) != len(result) {
 		t.Errorf("%q != %q", rawMsg, result)
+
 		return
 	}
 
 	for i, v := range rawMsg {
 		if v != result[i] {
 			t.Errorf("%q != %q", rawMsg, result)
+
 			break
 		}
 	}
@@ -89,6 +95,7 @@ func TestChannelAckUnmarshal(t *testing.T) {
 	msgUncast, err := parse(rawMsg)
 	if err != nil {
 		t.Errorf("Failed to parse: %v", err)
+
 		return
 	}
 
@@ -106,6 +113,10 @@ func TestChannelString(t *testing.T) {
 		Protocol: []byte("bar"),
 	}.String()
 
-	assert.Equal(t, channelString, "Open ChannelType(Unknown) Priority(0) ReliabilityParameter(0) Label(foo) Protocol(bar)")
+	assert.Equal(
+		t,
+		channelString,
+		"Open ChannelType(Unknown) Priority(0) ReliabilityParameter(0) Label(foo) Protocol(bar)",
+	)
 	assert.Equal(t, channelAck{}.String(), "ACK")
 }

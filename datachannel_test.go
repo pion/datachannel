@@ -17,7 +17,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// Check we implement our ReadWriteCloser
+// Check we implement our ReadWriteCloser.
 var _ ReadWriteCloser = (*DataChannel)(nil)
 
 func bridgeProcessAtLeastOne(br *test.Bridge) {
@@ -122,6 +122,8 @@ loop1:
 }
 
 func prOrderedTest(t *testing.T, channelType ChannelType) {
+	t.Helper()
+
 	// Limit runtime in case of deadlocks
 	lim := test.TimeOut(time.Second * 10)
 	defer lim.Stop()
@@ -196,6 +198,8 @@ func prOrderedTest(t *testing.T, channelType ChannelType) {
 }
 
 func prUnorderedTest(t *testing.T, channelType ChannelType) {
+	t.Helper()
+
 	sbuf := make([]byte, 1000)
 	rbuf := make([]byte, 2000)
 
@@ -525,6 +529,7 @@ func TestDataChannelBufferedAmount(t *testing.T) {
 		n, err = dc0.Write(sData)
 		assert.Nil(t, err, "Write() should succeed")
 		assert.Equal(t, len(sData), n, "data length should match")
+		//nolint:gosec //G115
 		assert.Equal(t, uint64(len(sData)*(i+1)+2), dc0.BufferedAmount(), "incorrect bufferedAmount")
 	}
 
@@ -595,7 +600,7 @@ func TestStats(t *testing.T) {
 	n, err = dc0.Write(sbuf)
 	assert.NoError(t, err, "Write() should succeed")
 	assert.Equal(t, len(sbuf), n, "data length should match")
-	bytesSent += uint64(n)
+	bytesSent += uint64(n) //nolint:gosec //G115
 
 	assert.Equal(t, dc0.BytesSent(), bytesSent)
 	assert.Equal(t, dc0.MessagesSent(), uint32(1))
@@ -603,7 +608,7 @@ func TestStats(t *testing.T) {
 	n, err = dc0.Write(sbuf)
 	assert.NoError(t, err, "Write() should succeed")
 	assert.Equal(t, len(sbuf), n, "data length should match")
-	bytesSent += uint64(n)
+	bytesSent += uint64(n) //nolint:gosec //G115
 
 	assert.Equal(t, dc0.BytesSent(), bytesSent)
 	assert.Equal(t, dc0.MessagesSent(), uint32(2))
@@ -611,7 +616,7 @@ func TestStats(t *testing.T) {
 	n, err = dc0.Write([]byte{0})
 	assert.NoError(t, err, "Write() should succeed")
 	assert.Equal(t, 1, n, "data length should match")
-	bytesSent += uint64(n)
+	bytesSent += uint64(n) //nolint:gosec //G115
 
 	assert.Equal(t, dc0.BytesSent(), bytesSent)
 	assert.Equal(t, dc0.MessagesSent(), uint32(3))
@@ -629,21 +634,21 @@ func TestStats(t *testing.T) {
 
 	n, err = dc1.Read(rbuf)
 	assert.NoError(t, err, "Read() should succeed")
-	bytesRead += uint64(n)
+	bytesRead += uint64(n) //nolint:gosec //G115
 
 	assert.Equal(t, dc1.BytesReceived(), bytesRead)
 	assert.Equal(t, dc1.MessagesReceived(), uint32(1))
 
 	n, err = dc1.Read(rbuf)
 	assert.NoError(t, err, "Read() should succeed")
-	bytesRead += uint64(n)
+	bytesRead += uint64(n) //nolint:gosec //G115
 
 	assert.Equal(t, dc1.BytesReceived(), bytesRead)
 	assert.Equal(t, dc1.MessagesReceived(), uint32(2))
 
 	n, err = dc1.Read(rbuf)
 	assert.NoError(t, err, "Read() should succeed")
-	bytesRead += uint64(n)
+	bytesRead += uint64(n) //nolint:gosec //G115
 
 	assert.Equal(t, n, 1)
 	assert.Equal(t, dc1.BytesReceived(), bytesRead)
