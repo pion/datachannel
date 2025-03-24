@@ -20,54 +20,30 @@ func TestChannelOpenMarshal(t *testing.T) {
 	}
 
 	rawMsg, err := msg.Marshal()
-	if err != nil {
-		t.Errorf("Failed to marshal: %v", err)
-
-		return
-	}
+	assert.NoError(t, err)
 
 	result := []byte{
 		0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 		0x03, 0x00, 0x03, 0x66, 0x6f, 0x6f, 0x62, 0x61, 0x72,
 	}
 
-	if len(rawMsg) != len(result) {
-		t.Errorf("%q != %q", rawMsg, result)
-
-		return
-	}
+	assert.Equal(t, len(result), len(rawMsg))
 
 	for i, v := range rawMsg {
-		if v != result[i] {
-			t.Errorf("%q != %q", rawMsg, result)
-
-			break
-		}
+		assert.Equal(t, result[i], v)
 	}
 }
 
 func TestChannelAckMarshal(t *testing.T) {
 	msg := channelAck{}
 	rawMsg, err := msg.Marshal()
-	if err != nil {
-		t.Errorf("Failed to marshal: %v", err)
+	assert.NoError(t, err)
 
-		return
-	}
 	result := []byte{0x02, 0x00, 0x00, 0x00}
-
-	if len(rawMsg) != len(result) {
-		t.Errorf("%q != %q", rawMsg, result)
-
-		return
-	}
+	assert.Equal(t, len(result), len(rawMsg))
 
 	for i, v := range rawMsg {
-		if v != result[i] {
-			t.Errorf("%q != %q", rawMsg, result)
-
-			break
-		}
+		assert.Equal(t, result[i], v)
 	}
 }
 
@@ -93,11 +69,7 @@ func TestChannelOpenUnmarshal(t *testing.T) {
 func TestChannelAckUnmarshal(t *testing.T) {
 	rawMsg := []byte{0x02}
 	msgUncast, err := parse(rawMsg)
-	if err != nil {
-		t.Errorf("Failed to parse: %v", err)
-
-		return
-	}
+	assert.NoError(t, err)
 
 	_, ok := msgUncast.(*channelAck)
 	assert.True(t, ok, "Failed to cast to ChannelAck")

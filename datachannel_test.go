@@ -135,9 +135,7 @@ func prOrderedTest(t *testing.T, channelType ChannelType) {
 	loggerFactory := logging.NewDefaultLoggerFactory()
 
 	a0, a1, err := createNewAssociationPair(br)
-	if !assert.Nil(t, err, "failed to create associations") {
-		assert.FailNow(t, "failed due to earlier error")
-	}
+	assert.NoError(t, err, "failed to create associations")
 
 	cfg := &Config{
 		ChannelType:          channelType,
@@ -147,13 +145,13 @@ func prOrderedTest(t *testing.T, channelType ChannelType) {
 	}
 
 	dc0, err := Dial(a0, 100, cfg)
-	assert.Nil(t, err, "Dial() should succeed")
+	assert.NoError(t, err, "Dial() should succeed")
 	bridgeProcessAtLeastOne(br)
 
 	dc1, err := Accept(a1, &Config{
 		LoggerFactory: loggerFactory,
 	})
-	assert.Nil(t, err, "Accept() should succeed")
+	assert.NoError(t, err, "Accept() should succeed")
 	bridgeProcessAtLeastOne(br)
 
 	assert.True(t, reflect.DeepEqual(dc0.Config, *cfg), "local config should match")
@@ -168,12 +166,12 @@ func prOrderedTest(t *testing.T, channelType ChannelType) {
 
 	binary.BigEndian.PutUint32(sbuf, 1)
 	n, err = dc0.WriteDataChannel(sbuf, true)
-	assert.Nil(t, err, "WriteDataChannel() should succeed")
+	assert.NoError(t, err, "WriteDataChannel() should succeed")
 	assert.Equal(t, len(sbuf), n, "data length should match")
 
 	binary.BigEndian.PutUint32(sbuf, 2)
 	n, err = dc0.WriteDataChannel(sbuf, true)
-	assert.Nil(t, err, "WriteDataChannel() should succeed")
+	assert.NoError(t, err, "WriteDataChannel() should succeed")
 	assert.Equal(t, len(sbuf), n, "data length should match")
 
 	time.Sleep(100 * time.Millisecond)
@@ -184,7 +182,7 @@ func prOrderedTest(t *testing.T, channelType ChannelType) {
 	var isString bool
 
 	n, isString, err = dc1.ReadDataChannel(rbuf)
-	assert.Nil(t, err, "Read() should succeed")
+	assert.NoError(t, err, "Read() should succeed")
 	assert.True(t, isString, "should return isString being true")
 	assert.Equal(t, uint32(2), binary.BigEndian.Uint32(rbuf[:n]), "data should match")
 
@@ -207,9 +205,7 @@ func prUnorderedTest(t *testing.T, channelType ChannelType) {
 	loggerFactory := logging.NewDefaultLoggerFactory()
 
 	a0, a1, err := createNewAssociationPair(br)
-	if !assert.Nil(t, err, "failed to create associations") {
-		assert.FailNow(t, "failed due to earlier error")
-	}
+	assert.NoError(t, err, "failed to create associations")
 
 	cfg := &Config{
 		ChannelType:          channelType,
@@ -219,13 +215,13 @@ func prUnorderedTest(t *testing.T, channelType ChannelType) {
 	}
 
 	dc0, err := Dial(a0, 100, cfg)
-	assert.Nil(t, err, "Dial() should succeed")
+	assert.NoError(t, err, "Dial() should succeed")
 	bridgeProcessAtLeastOne(br)
 
 	dc1, err := Accept(a1, &Config{
 		LoggerFactory: loggerFactory,
 	})
-	assert.Nil(t, err, "Accept() should succeed")
+	assert.NoError(t, err, "Accept() should succeed")
 	bridgeProcessAtLeastOne(br)
 
 	assert.True(t, reflect.DeepEqual(dc0.Config, *cfg), "local config should match")
@@ -240,34 +236,34 @@ func prUnorderedTest(t *testing.T, channelType ChannelType) {
 
 	binary.BigEndian.PutUint32(sbuf, 1)
 	n, err = dc0.WriteDataChannel(sbuf, true)
-	assert.Nil(t, err, "Read() should succeed")
+	assert.NoError(t, err, "Read() should succeed")
 	assert.Equal(t, len(sbuf), n, "data length should match")
 
 	binary.BigEndian.PutUint32(sbuf, 2)
 	n, err = dc0.WriteDataChannel(sbuf, true)
-	assert.Nil(t, err, "Read() should succeed")
+	assert.NoError(t, err, "Read() should succeed")
 	assert.Equal(t, len(sbuf), n, "data length should match")
 
 	binary.BigEndian.PutUint32(sbuf, 3)
 	n, err = dc0.WriteDataChannel(sbuf, true)
-	assert.Nil(t, err, "Read() should succeed")
+	assert.NoError(t, err, "Read() should succeed")
 	assert.Equal(t, len(sbuf), n, "data length should match")
 
 	time.Sleep(100 * time.Millisecond)
 	br.Drop(0, 0, 1)    // drop the first packet on the wire
 	err = br.Reorder(0) // reorder the rest of the packet
-	assert.Nil(t, err, "reorder failed")
+	assert.NoError(t, err, "reorder failed")
 	bridgeProcessAtLeastOne(br)
 
 	var isString bool
 
 	n, isString, err = dc1.ReadDataChannel(rbuf)
-	assert.Nil(t, err, "Read() should succeed")
+	assert.NoError(t, err, "Read() should succeed")
 	assert.True(t, isString, "should return isString being true")
 	assert.Equal(t, uint32(3), binary.BigEndian.Uint32(rbuf[:n]), "data should match")
 
 	n, isString, err = dc1.ReadDataChannel(rbuf)
-	assert.Nil(t, err, "Read() should succeed")
+	assert.NoError(t, err, "Read() should succeed")
 	assert.True(t, isString, "should return isString being true")
 	assert.Equal(t, uint32(2), binary.BigEndian.Uint32(rbuf[:n]), "data should match")
 
@@ -294,9 +290,7 @@ func TestDataChannel(t *testing.T) {
 		br := test.NewBridge()
 
 		a0, a1, err := createNewAssociationPair(br)
-		if !assert.Nil(t, err, "failed to create associations") {
-			assert.FailNow(t, "failed due to earlier error")
-		}
+		assert.NoError(t, err, "failed to create associations")
 
 		cfg := &Config{
 			ChannelType:          ChannelTypeReliable,
@@ -306,14 +300,14 @@ func TestDataChannel(t *testing.T) {
 		}
 
 		dc0, err := Dial(a0, 100, cfg)
-		assert.Nil(t, err, "Dial() should succeed")
+		assert.NoError(t, err, "Dial() should succeed")
 
 		bridgeProcessAtLeastOne(br)
 
 		dc1, err := Accept(a1, &Config{
 			LoggerFactory: loggerFactory,
 		})
-		assert.Nil(t, err, "Accept() should succeed")
+		assert.NoError(t, err, "Accept() should succeed")
 		bridgeProcessAtLeastOne(br)
 
 		assert.True(t, reflect.DeepEqual(dc0.Config, *cfg), "local config should match")
@@ -324,24 +318,24 @@ func TestDataChannel(t *testing.T) {
 		var n int
 		binary.BigEndian.PutUint32(sbuf, uint32(1))
 		n, err = dc0.Write(sbuf)
-		assert.Nil(t, err, "Write() should succeed")
+		assert.NoError(t, err, "Write() should succeed")
 		assert.Equal(t, len(sbuf), n, "data length should match")
 
 		binary.BigEndian.PutUint32(sbuf, uint32(2))
 		n, err = dc0.Write(sbuf)
-		assert.Nil(t, err, "Write() should succeed")
+		assert.NoError(t, err, "Write() should succeed")
 		assert.Equal(t, len(sbuf), n, "data length should match")
 
-		assert.Nil(t, err, "reorder failed")
+		assert.NoError(t, err, "reorder failed")
 
 		bridgeProcessAtLeastOne(br)
 
 		n, err = dc1.Read(rbuf)
-		assert.Nil(t, err, "Read() should succeed")
+		assert.NoError(t, err, "Read() should succeed")
 		assert.Equal(t, uint32(1), binary.BigEndian.Uint32(rbuf[:n]), "data should match")
 
 		n, err = dc1.Read(rbuf)
-		assert.Nil(t, err, "Read() should succeed")
+		assert.NoError(t, err, "Read() should succeed")
 		assert.Equal(t, uint32(2), binary.BigEndian.Uint32(rbuf[:n]), "data should match")
 
 		//nolint:errcheck,gosec
@@ -364,9 +358,7 @@ func TestDataChannel(t *testing.T) {
 		br := test.NewBridge()
 
 		a0, a1, err := createNewAssociationPair(br)
-		if !assert.Nil(t, err, "failed to create associations") {
-			assert.FailNow(t, "failed due to earlier error")
-		}
+		assert.NoError(t, err, "failed to create associations")
 
 		cfg := &Config{
 			ChannelType:          ChannelTypeReliableUnordered,
@@ -376,13 +368,13 @@ func TestDataChannel(t *testing.T) {
 		}
 
 		dc0, err := Dial(a0, 100, cfg)
-		assert.Nil(t, err, "Dial() should succeed")
+		assert.NoError(t, err, "Dial() should succeed")
 		bridgeProcessAtLeastOne(br)
 
 		dc1, err := Accept(a1, &Config{
 			LoggerFactory: loggerFactory,
 		})
-		assert.Nil(t, err, "Accept() should succeed")
+		assert.NoError(t, err, "Accept() should succeed")
 		bridgeProcessAtLeastOne(br)
 
 		assert.True(t, reflect.DeepEqual(dc0.Config, *cfg), "local config should match")
@@ -401,7 +393,7 @@ func TestDataChannel(t *testing.T) {
 		bridgeProcessAtLeastOne(br)
 		binary.BigEndian.PutUint32(sbuf, 10)
 		n, err = dc1.WriteDataChannel(sbuf, true)
-		assert.Nil(t, err, "Write() should succeed")
+		assert.NoError(t, err, "Write() should succeed")
 		assert.Equal(t, len(sbuf), n, "data length should match")
 
 		// read data channel open ACK and the user message sent above
@@ -418,28 +410,28 @@ func TestDataChannel(t *testing.T) {
 		// test unordered messages
 		binary.BigEndian.PutUint32(sbuf, 1)
 		n, err = dc0.WriteDataChannel(sbuf, true)
-		assert.Nil(t, err, "Write() should succeed")
+		assert.NoError(t, err, "Write() should succeed")
 		assert.Equal(t, len(sbuf), n, "data length should match")
 
 		binary.BigEndian.PutUint32(sbuf, 2)
 		n, err = dc0.WriteDataChannel(sbuf, true)
-		assert.Nil(t, err, "Write() should succeed")
+		assert.NoError(t, err, "Write() should succeed")
 		assert.Equal(t, len(sbuf), n, "data length should match")
 
 		time.Sleep(100 * time.Millisecond)
 		err = br.Reorder(0) // reordering on the wire
-		assert.Nil(t, err, "reorder failed")
+		assert.NoError(t, err, "reorder failed")
 		bridgeProcessAtLeastOne(br)
 
 		var isString bool
 
 		n, isString, err = dc1.ReadDataChannel(rbuf)
-		assert.Nil(t, err, "Read() should succeed")
+		assert.NoError(t, err, "Read() should succeed")
 		assert.True(t, isString, "should return isString being true")
 		assert.Equal(t, uint32(2), binary.BigEndian.Uint32(rbuf[:n]), "data should match")
 
 		n, isString, err = dc1.ReadDataChannel(rbuf)
-		assert.Nil(t, err, "Read() should succeed")
+		assert.NoError(t, err, "Read() should succeed")
 		assert.True(t, isString, "should return isString being true")
 		assert.Equal(t, uint32(1), binary.BigEndian.Uint32(rbuf[:n]), "data should match")
 
@@ -477,44 +469,42 @@ func TestDataChannelBufferedAmount(t *testing.T) {
 	loggerFactory := logging.NewDefaultLoggerFactory()
 
 	a0, a1, err := createNewAssociationPair(br)
-	if !assert.Nil(t, err, "failed to create associations") {
-		assert.FailNow(t, "failed due to earlier error")
-	}
+	assert.NoError(t, err, "failed to create associations")
 
 	dc0, err := Dial(a0, 100, &Config{
 		Label:         "data",
 		LoggerFactory: loggerFactory,
 	})
-	assert.Nil(t, err, "Dial() should succeed")
+	assert.NoError(t, err, "Dial() should succeed")
 	bridgeProcessAtLeastOne(br)
 
 	dc1, err := Accept(a1, &Config{
 		LoggerFactory: loggerFactory,
 	})
-	assert.Nil(t, err, "Accept() should succeed")
+	assert.NoError(t, err, "Accept() should succeed")
 
 	for dc0.BufferedAmount() > 0 {
 		bridgeProcessAtLeastOne(br)
 	}
 
 	n, err := dc0.Write([]byte{})
-	assert.Nil(t, err, "Write() should succeed")
+	assert.NoError(t, err, "Write() should succeed")
 	assert.Equal(t, 0, n, "data length should match")
 	assert.Equal(t, uint64(1), dc0.BufferedAmount(), "incorrect bufferedAmount")
 
 	n, err = dc0.Write([]byte{0})
-	assert.Nil(t, err, "Write() should succeed")
+	assert.NoError(t, err, "Write() should succeed")
 	assert.Equal(t, 1, n, "data length should match")
 	assert.Equal(t, uint64(2), dc0.BufferedAmount(), "incorrect bufferedAmount")
 
 	bridgeProcessAtLeastOne(br)
 
 	n, err = dc1.Read(rData)
-	assert.Nil(t, err, "Read() should succeed")
+	assert.NoError(t, err, "Read() should succeed")
 	assert.Equal(t, n, 0, "received length should match")
 
 	n, err = dc1.Read(rData)
-	assert.Nil(t, err, "Read() should succeed")
+	assert.NoError(t, err, "Read() should succeed")
 	assert.Equal(t, n, 1, "received length should match")
 
 	dc0.SetBufferedAmountLowThreshold(1500)
@@ -527,7 +517,7 @@ func TestDataChannelBufferedAmount(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		var n int
 		n, err = dc0.Write(sData)
-		assert.Nil(t, err, "Write() should succeed")
+		assert.NoError(t, err, "Write() should succeed")
 		assert.Equal(t, len(sData), n, "data length should match")
 		//nolint:gosec //G115
 		assert.Equal(t, uint64(len(sData)*(i+1)+2), dc0.BufferedAmount(), "incorrect bufferedAmount")
@@ -573,9 +563,7 @@ func TestStats(t *testing.T) {
 	br := test.NewBridge()
 
 	a0, a1, err := createNewAssociationPair(br)
-	if !assert.Nil(t, err, "failed to create associations") {
-		assert.FailNow(t, "failed due to earlier error")
-	}
+	assert.NoError(t, err, "failed to create associations")
 
 	cfg := &Config{
 		ChannelType:          ChannelTypeReliable,
@@ -677,9 +665,7 @@ func TestDataChannelAcceptWrite(t *testing.T) {
 	out := make([]byte, 100)
 
 	a0, a1, err := createNewAssociationPair(br)
-	if !assert.Nil(t, err, "failed to create associations") {
-		assert.FailNow(t, "failed due to earlier error")
-	}
+	assert.NoError(t, err, "failed to create associations")
 
 	cfg := &Config{
 		ChannelType:          ChannelTypeReliable,
@@ -699,7 +685,7 @@ func TestDataChannelAcceptWrite(t *testing.T) {
 	bridgeProcessAtLeastOne(br)
 
 	n, err := dc1.WriteDataChannel(in, true)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, len(in), n)
 	bridgeProcessAtLeastOne(br)
 
@@ -773,9 +759,7 @@ func TestReadDeadline(t *testing.T) {
 	br := test.NewBridge()
 
 	a0, a1, err := createNewAssociationPair(br)
-	if !assert.Nil(t, err, "failed to create associations") {
-		assert.FailNow(t, "failed due to earlier error")
-	}
+	assert.NoError(t, err, "failed to create associations")
 
 	cfg := &Config{
 		ChannelType:          ChannelTypeReliable,
@@ -807,9 +791,7 @@ func TestClose(t *testing.T) {
 		br := test.NewBridge()
 
 		a0, a1, err := createNewAssociationPair(br)
-		if !assert.Nil(t, err, "failed to create associations") {
-			assert.FailNow(t, "failed due to earlier error")
-		}
+		assert.NoError(t, err, "failed to create associations")
 
 		cfg := &Config{
 			ChannelType:          ChannelTypeReliable,
@@ -849,9 +831,7 @@ func TestClose(t *testing.T) {
 		br := test.NewBridge()
 
 		a0, a1, err := createNewAssociationPair(br)
-		if !assert.Nil(t, err, "failed to create associations") {
-			assert.FailNow(t, "failed due to earlier error")
-		}
+		assert.NoError(t, err, "failed to create associations")
 
 		cfg := &Config{
 			ChannelType:          ChannelTypeReliable,
