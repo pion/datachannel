@@ -112,6 +112,7 @@ func (c *channelOpen) Marshal() ([]byte, error) {
 
 	raw[0] = uint8(dataChannelOpen)
 	raw[1] = byte(c.ChannelType)
+
 	binary.BigEndian.PutUint16(raw[2:], c.Priority)
 	binary.BigEndian.PutUint32(raw[4:], c.ReliabilityParameter)
 	binary.BigEndian.PutUint16(raw[8:], uint16(labelLength))     //nolint:gosec //G115
