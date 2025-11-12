@@ -88,7 +88,7 @@ func TestChannelString(t *testing.T) {
 	assert.Equal(
 		t,
 		channelString,
-		"Open ChannelType(Unknown) Priority(0) ReliabilityParameter(0) Label(foo) Protocol(bar)",
+		"Open ChannelType(ReliableOrdered) Priority(0) ReliabilityParameter(0) Label(foo) Protocol(bar)",
 	)
 	assert.Equal(t, channelAck{}.String(), "ACK")
 }
