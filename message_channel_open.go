@@ -79,6 +79,7 @@ const (
 func (c ChannelType) String() string {
 	switch c {
 	case ChannelTypeReliable:
+		return "ReliableOrdered"
 	case ChannelTypeReliableUnordered:
 		return "ReliableUnordered"
 	case ChannelTypePartialReliableRexmit:
