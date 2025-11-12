@@ -107,6 +107,13 @@ func Dial(a *sctp.Association, id uint16, config *Config) (*DataChannel, error) 
 		return nil, err
 	}
 
+	isReliable := dc.ChannelType == ChannelTypeReliable || dc.ChannelType == ChannelTypeReliableUnordered
+	if isReliable && dc.ReliabilityParameter != 0 {
+		dc.log.Warnf("DataChannel opened with channel type %s, but has a non-zero reliability parameter: %d (expected 0)",
+			dc.ChannelType,
+			dc.ReliabilityParameter)
+	}
+
 	return dc, nil
 }
 
@@ -411,9 +418,17 @@ func (c *DataChannel) OnBufferedAmountLow(f func()) {
 func (c *DataChannel) commitReliabilityParams() error {
 	switch c.Config.ChannelType {
 	case ChannelTypeReliable:
-		c.stream.SetReliabilityParams(false, sctp.ReliabilityTypeReliable, c.Config.ReliabilityParameter)
+		c.stream.SetReliabilityParams(false, sctp.ReliabilityTypeReliable, c.Config.ReliabilityParameter) // RFC 8832 sec 5.1
+		if c.Config.ReliabilityParameter != 0 {
+			c.log.Warnf("Channel type is Reliable but has a non-zero reliability parameter: %d (expected 0)",
+				c.Config.ReliabilityParameter)
+		}
 	case ChannelTypeReliableUnordered:
-		c.stream.SetReliabilityParams(true, sctp.ReliabilityTypeReliable, c.Config.ReliabilityParameter)
+		c.stream.SetReliabilityParams(true, sctp.ReliabilityTypeReliable, c.Config.ReliabilityParameter) // RFC 8832 sec 5.1
+		if c.Config.ReliabilityParameter != 0 {
+			c.log.Warnf("Channel type is ReliableUnordered but has a non-zero reliability parameter: %d (expected 0)",
+				c.Config.ReliabilityParameter)
+		}
 	case ChannelTypePartialReliableRexmit:
 		c.stream.SetReliabilityParams(false, sctp.ReliabilityTypeRexmit, c.Config.ReliabilityParameter)
 	case ChannelTypePartialReliableRexmitUnordered:
