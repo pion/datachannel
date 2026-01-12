@@ -2,7 +2,7 @@ module github.com/pion/datachannel
 
 require (
 	github.com/pion/logging v0.2.4
-	github.com/pion/sctp v1.9.1
+	github.com/pion/sctp v1.9.2
 	github.com/pion/transport/v4 v4.0.1
 	github.com/stretchr/testify v1.11.1
 )
