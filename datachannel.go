@@ -68,9 +68,9 @@ type DataChannel struct {
 	bytesSent        uint64
 	bytesReceived    uint64
 
-	mu                      sync.Mutex
-	onOpenCompleteHandler   func()
-	openCompleteHandlerOnce sync.Once
+	mu                    sync.Mutex
+	onOpenCompleteHandler func()
+	openFired             bool
 
 	stream *sctp.Stream
 	log    logging.LeveledLogger
@@ -268,25 +268,28 @@ func (c *DataChannel) MessagesReceived() uint32 {
 
 // OnOpen sets an event handler which is invoked when
 // a DATA_CHANNEL_ACK message is received.
-// The handler is called only on thefor the channel opened
+// The handler is called only on the channel opened
 // https://datatracker.ietf.org/doc/html/draft-ietf-rtcweb-data-protocol-09#section-5.2
 func (c *DataChannel) OnOpen(f func()) {
 	c.mu.Lock()
-	c.openCompleteHandlerOnce = sync.Once{}
 	c.onOpenCompleteHandler = f
+	c.openFired = false
 	c.mu.Unlock()
 }
 
 func (c *DataChannel) onOpenComplete() {
 	c.mu.Lock()
-	hdlr := c.onOpenCompleteHandler
+	if c.openFired || c.onOpenCompleteHandler == nil {
+		c.mu.Unlock()
+
+		return
+	}
+
+	c.openFired = true
+	handler := c.onOpenCompleteHandler
 	c.mu.Unlock()
 
-	if hdlr != nil {
-		go c.openCompleteHandlerOnce.Do(func() {
-			hdlr()
-		})
-	}
+	go handler()
 }
 
 // BytesSent returns the number of bytes sent.
@@ -372,7 +375,7 @@ func (c *DataChannel) writeDataChannelAck() error {
 		return fmt.Errorf("failed to send ChannelOpen ACK: %w", err)
 	}
 
-	return err
+	return nil
 }
 
 // Close closes the DataChannel and the underlying SCTP stream.
