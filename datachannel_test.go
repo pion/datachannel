@@ -58,7 +58,7 @@ func createNewAssociationPair(br *test.Bridge) (*sctp.Association, *sctp.Associa
 	a0handshakeDone := false
 	a1handshakeDone := false
 loop1:
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		time.Sleep(10 * time.Millisecond)
 		br.Tick()
 
@@ -103,7 +103,7 @@ func closeAssociationPair(br *test.Bridge, a0, a1 *sctp.Association) {
 	a0closed := false
 	a1closed := false
 loop1:
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		time.Sleep(10 * time.Millisecond)
 		br.Tick()
 
@@ -514,7 +514,7 @@ func TestDataChannelBufferedAmount(t *testing.T) {
 	})
 
 	// Write 10 1000-byte packets (total 10,000 bytes)
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		var n int
 		n, err = dc0.Write(sData)
 		assert.NoError(t, err, "Write() should succeed")
