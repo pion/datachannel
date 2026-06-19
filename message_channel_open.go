@@ -141,8 +141,10 @@ func (c *channelOpen) Unmarshal(raw []byte) error {
 		return fmt.Errorf("%w expected(%d) actual(%d)", ErrExpectedAndActualLengthMismatch, expectedLen, len(raw))
 	}
 
-	c.Label = raw[channelOpenHeaderLength : channelOpenHeaderLength+labelLength]
-	c.Protocol = raw[channelOpenHeaderLength+labelLength : channelOpenHeaderLength+labelLength+protocolLength]
+	labelEnd := channelOpenHeaderLength + int(labelLength)
+	protoEnd := labelEnd + int(protocolLength)
+	c.Label = raw[channelOpenHeaderLength:labelEnd]
+	c.Protocol = raw[labelEnd:protoEnd]
 
 	return nil
 }
