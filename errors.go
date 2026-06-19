@@ -26,4 +26,10 @@ var (
 
 	// ErrUnexpectedDataChannelType is when a message type does not match the expected type.
 	ErrUnexpectedDataChannelType = errors.New("expected and actual message type does not match")
+
+	// ErrTooLongLabel is when the label is too long to fit in the 2 bytes allocated for its length.
+	ErrTooLongLabel = errors.New("label is too long, must be less than 65536 characters")
+
+	// ErrTooLongProtocol is when the protocol is too long to fit in the 2 bytes allocated for its length.
+	ErrTooLongProtocol = errors.New("protocol is too long, must be less than 65536 characters")
 )

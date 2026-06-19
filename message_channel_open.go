@@ -76,6 +76,11 @@ const (
 	ChannelTypePartialReliableTimedUnordered ChannelType = 0x82
 )
 
+const (
+	maxLabelLength    = 65535
+	maxProtocolLength = 65535
+)
+
 func (c ChannelType) String() string {
 	switch c {
 	case ChannelTypeReliable:
@@ -107,6 +112,13 @@ const (
 func (c *channelOpen) Marshal() ([]byte, error) {
 	labelLength := len(c.Label)
 	protocolLength := len(c.Protocol)
+
+	if labelLength > maxLabelLength {
+		return nil, ErrTooLongLabel
+	}
+	if protocolLength > maxProtocolLength {
+		return nil, ErrTooLongProtocol
+	}
 
 	totalLen := channelOpenHeaderLength + labelLength + protocolLength
 	raw := make([]byte, totalLen)
