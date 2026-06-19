@@ -95,8 +95,8 @@ func TestChannelString(t *testing.T) {
 }
 
 func TestChannelOpenUnmarshalVeryLongMessage(t *testing.T) {
-	label := strings.Repeat("a", 0xffff)
-	protocol := strings.Repeat("b", 0xffff)
+	label := strings.Repeat("a", maxLabelLength)
+	protocol := strings.Repeat("b", maxProtocolLength)
 
 	rawMsg := []byte{
 		0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -116,4 +116,30 @@ func TestChannelOpenUnmarshalVeryLongMessage(t *testing.T) {
 	assert.Equal(t, msg.ReliabilityParameter, uint32(0), "ReliabilityParameter should be 0")
 	assert.Equal(t, msg.Label, []uint8(label), "msg Label should be 'aaa...aaa'")
 	assert.Equal(t, msg.Protocol, []uint8(protocol), "msg protocol should be 'bbb...bbb'")
+}
+
+func TestChannelOpenMarshalTooLongLabel(t *testing.T) {
+	msg := channelOpen{
+		ChannelType:          ChannelTypeReliable,
+		Priority:             0,
+		ReliabilityParameter: 0,
+		Label:                []byte(strings.Repeat("a", maxLabelLength+1)),
+		Protocol:             []byte("bar"),
+	}
+
+	_, err := msg.Marshal()
+	assert.ErrorIs(t, err, ErrTooLongLabel)
+}
+
+func TestChannelOpenMarshalTooLongProtocol(t *testing.T) {
+	msg := channelOpen{
+		ChannelType:          ChannelTypeReliable,
+		Priority:             0,
+		ReliabilityParameter: 0,
+		Label:                []byte("foo"),
+		Protocol:             []byte(strings.Repeat("b", maxProtocolLength+1)),
+	}
+
+	_, err := msg.Marshal()
+	assert.ErrorIs(t, err, ErrTooLongProtocol)
 }
