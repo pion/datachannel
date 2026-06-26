@@ -41,17 +41,17 @@ func createNewAssociationPair(br *test.Bridge) (*sctp.Association, *sctp.Associa
 	handshake1Ch := make(chan bool)
 
 	go func() {
-		a0, err0 = sctp.Client(sctp.Config{
-			NetConn:       br.GetConn0(),
-			LoggerFactory: loggerFactory,
-		})
+		a0, err0 = sctp.ClientWithOptions(
+			sctp.WithNetConn(br.GetConn0()),
+			sctp.WithLoggerFactory(loggerFactory),
+		)
 		handshake0Ch <- true
 	}()
 	go func() {
-		a1, err1 = sctp.Client(sctp.Config{
-			NetConn:       br.GetConn1(),
-			LoggerFactory: loggerFactory,
-		})
+		a1, err1 = sctp.ClientWithOptions(
+			sctp.WithNetConn(br.GetConn1()),
+			sctp.WithLoggerFactory(loggerFactory),
+		)
 		handshake1Ch <- true
 	}()
 
