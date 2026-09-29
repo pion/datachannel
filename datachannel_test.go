@@ -6,8 +6,10 @@ package datachannel
 import (
 	"encoding/binary"
 	"io"
+	"net"
 	"os"
 	"reflect"
+	"sync"
 	"testing"
 	"time"
 
@@ -33,6 +35,12 @@ func bridgeProcessAtLeastOne(br *test.Bridge) {
 }
 
 func createNewAssociationPair(br *test.Bridge) (*sctp.Association, *sctp.Association, error) {
+	return createNewAssociationPairWithConn0(br, br.GetConn0())
+}
+
+func createNewAssociationPairWithConn0(
+	br *test.Bridge, conn0 net.Conn,
+) (*sctp.Association, *sctp.Association, error) {
 	var a0, a1 *sctp.Association
 	var err0, err1 error
 	loggerFactory := logging.NewDefaultLoggerFactory()
@@ -42,7 +50,7 @@ func createNewAssociationPair(br *test.Bridge) (*sctp.Association, *sctp.Associa
 
 	go func() {
 		a0, err0 = sctp.ClientWithOptions(
-			sctp.WithNetConn(br.GetConn0()),
+			sctp.WithNetConn(conn0),
 			sctp.WithLoggerFactory(loggerFactory),
 		)
 		handshake0Ch <- true
@@ -749,6 +757,104 @@ func TestOnOpen(t *testing.T) {
 	assert.NoError(t, dc0.Close())
 	assert.NoError(t, dc1.Close())
 	bridgeProcessAtLeastOne(br)
+
+	closeAssociationPair(br, a0, a1)
+}
+
+// sentDataChunkFlags records the flags of every outgoing SCTP DATA chunk
+// that does not carry a DCEP message.
+type sentDataChunkFlags struct {
+	net.Conn
+	mu    sync.Mutex
+	flags []byte
+}
+
+func (c *sentDataChunkFlags) Write(b []byte) (int, error) {
+	const (
+		commonHeaderSize = 12
+		chunkHeaderSize  = 4
+		typeData         = 0
+		typeIData        = 64
+		dataPPIOffset    = 12 // within a DATA chunk
+		iDataPPIOffset   = 16 // within an I-DATA chunk
+	)
+
+	c.mu.Lock()
+	for off := commonHeaderSize; off+chunkHeaderSize <= len(b); {
+		length := int(binary.BigEndian.Uint16(b[off+2:]))
+		if length < chunkHeaderSize {
+			break
+		}
+
+		ppiOffset := 0
+		switch b[off] {
+		case typeData:
+			ppiOffset = dataPPIOffset
+		case typeIData:
+			ppiOffset = iDataPPIOffset
+		}
+		if ppiOffset != 0 && off+ppiOffset+4 <= len(b) {
+			ppi := sctp.PayloadProtocolIdentifier(binary.BigEndian.Uint32(b[off+ppiOffset:]))
+			if ppi != sctp.PayloadTypeWebRTCDCEP {
+				c.flags = append(c.flags, b[off+1])
+			}
+		}
+		off += (length + 3) &^ 3
+	}
+	c.mu.Unlock()
+
+	return c.Conn.Write(b)
+}
+
+func (c *sentDataChunkFlags) recorded() []byte {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	return append([]byte(nil), c.flags...)
+}
+
+func TestNegotiatedChannelReliabilityParams(t *testing.T) {
+	const unorderedFlag = 0x04
+
+	lim := test.TimeOut(time.Second * 10)
+	defer lim.Stop()
+
+	br := test.NewBridge()
+	recorder := &sentDataChunkFlags{Conn: br.GetConn0()}
+	a0, a1, err := createNewAssociationPairWithConn0(br, recorder)
+	assert.NoError(t, err)
+
+	dc, err := Dial(a0, 100, &Config{
+		ChannelType:   ChannelTypeReliableUnordered,
+		Negotiated:    true,
+		Label:         "negotiated",
+		LoggerFactory: logging.NewDefaultLoggerFactory(),
+	})
+	assert.NoError(t, err)
+
+	_, err = dc.Write([]byte("hello"))
+	assert.NoError(t, err)
+	bridgeProcessAtLeastOne(br)
+
+	flags := recorder.recorded()
+	if assert.Len(t, flags, 1, "expected one DATA chunk") {
+		assert.NotZero(t, flags[0]&unorderedFlag, "unordered channel sent an ordered DATA chunk")
+	}
+
+	closeAssociationPair(br, a0, a1)
+}
+
+func TestNegotiatedChannelInvalidChannelType(t *testing.T) {
+	br := test.NewBridge()
+	a0, a1, err := createNewAssociationPair(br)
+	assert.NoError(t, err)
+
+	_, err = Dial(a0, 100, &Config{
+		ChannelType:   ChannelType(0x42),
+		Negotiated:    true,
+		LoggerFactory: logging.NewDefaultLoggerFactory(),
+	})
+	assert.ErrorIs(t, err, ErrInvalidChannelType)
 
 	closeAssociationPair(br, a0, a1)
 }
