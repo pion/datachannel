@@ -139,7 +139,17 @@ func Client(stream *sctp.Stream, config *Config) (*DataChannel, error) {
 		}
 	}
 
-	return newDataChannel(stream, config), nil
+	dataChannel := newDataChannel(stream, config)
+
+	// A negotiated channel exchanges no DCEP messages, so no ACK will commit
+	// its reliability parameters; commit them now.
+	if config.Negotiated {
+		if err := dataChannel.commitReliabilityParams(); err != nil {
+			return nil, err
+		}
+	}
+
+	return dataChannel, nil
 }
 
 // Accept is used to accept incoming data channels over SCTP.
