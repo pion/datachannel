@@ -876,3 +876,65 @@ func TestClose(t *testing.T) {
 		assert.ErrorIs(t, err, io.EOF)
 	})
 }
+
+// TestNegotiatedPartialReliability checks that a negotiated channel, which
+// exchanges no DCEP messages, applies its reliability parameters: a message
+// lost on the wire is not retransmitted.
+func TestNegotiatedPartialReliability(t *testing.T) {
+	br := test.NewBridge()
+	loggerFactory := logging.NewDefaultLoggerFactory()
+
+	a0, a1, err := createNewAssociationPair(br)
+	assert.NoError(t, err, "failed to create associations")
+
+	cfg := &Config{
+		ChannelType:          ChannelTypePartialReliableRexmitUnordered,
+		ReliabilityParameter: 0,
+		Label:                "data",
+		Negotiated:           true,
+		LoggerFactory:        loggerFactory,
+	}
+	dc0, err := Dial(a0, 100, cfg)
+	assert.NoError(t, err, "Dial() should succeed")
+	dc1, err := Dial(a1, 100, cfg)
+	assert.NoError(t, err, "Dial() should succeed")
+
+	// Send three messages and drop the first on the wire.
+	sbuf := make([]byte, 1000)
+	for i := uint32(1); i <= 3; i++ {
+		binary.BigEndian.PutUint32(sbuf, i)
+		n, err := dc0.WriteDataChannel(sbuf, false)
+		assert.NoError(t, err, "WriteDataChannel() should succeed")
+		assert.Equal(t, len(sbuf), n, "data length should match")
+	}
+	time.Sleep(100 * time.Millisecond)
+	br.Drop(0, 0, 1)
+	bridgeProcessAtLeastOne(br)
+
+	// Give a reliable stream time to retransmit the dropped message.
+	for range 30 {
+		time.Sleep(50 * time.Millisecond)
+		br.Tick()
+	}
+
+	// Only the two messages that crossed the wire arrive.
+	rbuf := make([]byte, 2000)
+	var got []uint32
+	for {
+		assert.NoError(t, dc1.SetReadDeadline(time.Now().Add(200*time.Millisecond)))
+		n, _, err := dc1.ReadDataChannel(rbuf)
+		if err != nil {
+			break
+		}
+		got = append(got, binary.BigEndian.Uint32(rbuf[:n]))
+	}
+	assert.ElementsMatch(t, []uint32{2, 3}, got, "the dropped message should not be retransmitted")
+
+	//nolint:errcheck,gosec
+	dc0.Close()
+	//nolint:errcheck,gosec
+	dc1.Close()
+	bridgeProcessAtLeastOne(br)
+
+	closeAssociationPair(br, a0, a1)
+}
